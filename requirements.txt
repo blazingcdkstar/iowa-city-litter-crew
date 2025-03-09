@@ -1,0 +1,11 @@
+pandas
+numpy
+plotly.express
+datetime
+dash
+dash_bootstrap_components
+dash.exceptions
+dash_iconify
+dash_ag_grid
+plotly.graph_objects
+gunicorn
