@@ -148,7 +148,7 @@ litter_ct_brands = litter_ct_brands.rename(columns = {'sub_cat_2': 'main_categor
 
 
 litter_ct_brands['sub_category'] = litter_ct_brands['sub_category'].str.strip()
-
+'''
 litter_ct_brands_piv = litter_ct_brands.groupby('sub_category').agg(
      litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
 ).reset_index()
@@ -157,11 +157,13 @@ litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', asc
 
 #litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
 
+
 litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
 litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
                                                 'litter_count': 'Litter Count'})
 
 litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
+'''
 
 litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
 litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
@@ -260,6 +262,26 @@ litter_dumping = clean_subset(litter_dumping, 'dumping')
 
 litter_industrial = litter.iloc[:,col_names_index[8]:col_names_index[9]]
 litter_industrial = clean_subset(litter_industrial, 'industrial')
+
+
+litter_brands = litter.iloc[:,col_names_index[9]:col_names_index[10]]
+litter_brands = clean_subset(litter_brands, 'brand_name')
+litter_brands = pd.concat([litter_ct_brands, litter_brands], ignore_index=True)
+
+
+litter_ct_brands_piv = litter_brands.groupby('sub_category').agg(
+     litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
+).reset_index()
+
+litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', ascending=False).reset_index()
+
+#litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
+
+litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
+litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
+                                                'litter_count': 'Litter Count'})
+
+litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
 
 
 #litter_brands = litter_ct_brands
