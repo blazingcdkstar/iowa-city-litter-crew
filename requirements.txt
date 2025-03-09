@@ -6,5 +6,4 @@ dash
 dash_bootstrap_components
 dash_iconify
 dash_ag_grid
-plotly.graph_objects
 gunicorn
