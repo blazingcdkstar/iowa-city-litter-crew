@@ -618,7 +618,7 @@ app.layout = html.Div([
                 #columnSize = 'sizeToFit',
                 defaultColDef={'filter': True,
                                'sortable': True,
-                               'minWidth': 600},
+                               'minWidth': 450},
                 rowStyle={"backgroundColor": "darkgrey", "color": "white"},
                 dashGridOptions = {"pagination": True, 
                 "paginationPageSize": 10,
@@ -628,7 +628,7 @@ app.layout = html.Div([
                 className="ag-theme-alpine",
                 style={
                 "height": "550px",
-                "width": "70%",
+                "width": "50%",
             },
                 
             ), 
@@ -661,7 +661,7 @@ app.layout = html.Div([
                 className="ag-theme-alpine",
                 style={
                 "height": "550px",
-                "width": "60%",
+                "width": "50%",
             },
                 
                 
@@ -793,98 +793,133 @@ app.layout = html.Div([
     dcc.Graph(id = 'bar_chart',
             style = {'height': '35vh'},
             config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                   "autoScale2d" "select2d", "lasso2d"]}),   
+                                                   "autoScale2d" "select2d", "lasso2d"]}),
     
+   
     html.Br(),
-    html.H1("Links",
-            style = {'textAlign': 'center'}),
+    html.Br(),
 
-    html.Br(),
+
+html.Br(),
+html.Br(),
+html.Br(),
+
+dbc.Row([
+    
+    dbc.Col([
+        html.H3("Litter Examples"),
+        dbc.Carousel(
+            items=[
+                {
+                    "key": "1",
+                    "src": "/assets/cig_butts_Sycamore_Greenway_Trail.jpg",
+                    #"img_style":{"width":"200px","height":"100px" },
+                    #"header": "With header ",
+                    "caption": "Cigarette butts on the Sycamore Greenway Trail",
+                },
+                {
+                    "key": "2",
+                    "src": "/assets/South of 6 Cleanup.jpg",
+                    #"header": "With header only",
+                    "caption": "ICLC South of 6 Cleanup 10/12/2024",
+                },
+                {
+                    "key": "3",
+                    "src": "/assets/cups_bottles.jpg",
+                    #"header": "",
+                    "caption": "plastic cups and bottles",
+                },
+                 {
+                    "key": "4",
+                    "src": "/assets/trash.jpg",
+                    #"header": "",
+                    "caption": "bag of trash litter",
+                },
+            ], 
+        ),
+    ]),
+
+
+    dbc.Col([
+        html.H3("Whispering Meadows Wetland Cleanup Spring 2025"),
+        dbc.Carousel(
+            items=[
+                {
+                    "key": "1",
+                    "src": "/assets/test.jpg",
+                    #"img_style":{"width":"500px","height":"300px"},
+                    "font_face":"bold",
+                    #"header": "March 16th 2025",
+                    "caption": "1st Pickup at Whispering Meadows Wetlands 3/16/2025",
+                },
+                {
+                    "key": "2",
+                    "src": "/assets/Melissa and Cara.jpg",
+                    "header": "Cara and Melissa, Leaders of Iowa City Litter Crew",
+                    "caption": " Week 2 at Whispering Meadows Wetlands 3/23/2025",
+                },
+                {
+                    "key": "3",
+                    "src": "/assets/bird_nest.jpg",
+                    #"header": "March ",
+                    "caption": "Bird's nest with plastic litter",
+                },
+                  {
+                    "key": "4",
+                    "src": "/assets/Kipper_Litter.jpg",
+                    #"header": "March ",
+                    "caption": "Kipper, Cara's Litter Helper",
+                },
+                 {
+                    "key": "5",
+                    "src": "/assets/A-before-after.JPG",
+                    #"img_style":{"width":"200px","height":"100px" },
+                    #"header": "With header ",
+                    "caption": "Before and After",
+                },
+                {
+                    "key": "6",
+                    "src": "/assets/B-before-after.JPG",
+                    #"header": "With header only",
+                    "caption": "Before and After 2",
+                },
+                {
+                    "key": "7",
+                    "src": "/assets/C-before-after.JPG",
+                    #"header": "",
+                    "caption": "Before and After 3",
+                },
+            ]
+            #, variant = 'dark'
+        )
+        ]),
+]),
+
+
+html.Br(),
+html.Br(),
+html.Br(),
+
+
     dbc.Row([
-        dbc.Col(dbc.Button('Join Iowa City Litter Crew on Meetup'  ,
-                                   href = 'https://www.meetup.com/iowa-city-litter-crew/',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-
-        dbc.Col(dbc.Button('Iowa City Litter Crew on Facebook',
-                                   href = 'https://www.facebook.com/groups/iowacitylittercrew/',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-
-        dbc.Col(dbc.Button('Bottle Bill Map',
-                                   href = 'https://www.google.com/maps/d/u/0/edit?mid=1G0sMOiwBknVO1LEJeHDcq4wbbwVhNXc&usp=sharing',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-
-        dbc.Col(dbc.Button('Open Litter Map',
-                                   href = 'https://openlittermap.com/',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-
-        dbc.Col(dbc.Button('Open Litter Map - Map of Iowa City',
-                                   href = 'https://openlittermap.com/global?lat=41.64373708513251&lon=-91.51480972932332&zoom=13.48',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-
-        dbc.Col(dbc.Button('Litter Bingo Card',
-                                   href = 'https://carbonear.ca/wp-content/uploads/2022/05/Litter-Bingo-2022.png',
-                                   external_link=True,
-                                   target='_blank',
-                                   style={'background-color':'white',
-                                          'color': 'steelblue',
-                                          'font-size':'25px',
-                                          'font-face':'bold'}),
-        width='auto'),
-    ], justify = 'center'),     
+            dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
+                        style = {'height':'10%',
+                        'width': '10%',
+                            }
+            ), 
+            dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
+                        style = {'height':'10%',
+                        'width': '10%',
+                            }
+            ),
+            dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
+                        style = {'height':'20%',
+                        'width': '10%',
+                            }
+            ),
 
 
-    html.Br(),
-    html.Br(),
-
-        dbc.Row([
-                dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
-                            style = {'height':'10%',
-                            'width': '10%',
-                             }
-                ), 
-                dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
-                            style = {'height':'10%',
-                            'width': '10%',
-                             }
-                ),
-                dbc.CardImg(src="/assets/bottle.jpg", bottom=True,                             
-                            style = {'height':'20%',
-                            'width': '10%',
-                             }
-                ),
-
-
-        ], justify='center')
+    ], justify='center')
 
 
 
