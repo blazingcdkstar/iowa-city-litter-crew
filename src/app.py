@@ -64,12 +64,13 @@ color_discrete_map = {'Softdrinks': '#3366CC',
                             'Coffee': '#0099C6',
                             'Sanitary': '#DD4477',
                             'Custom_Litter_Type': '#66AA00',
-                            'Industrial': '#B82E2E'}
+                            'Industrial': '#B82E2E',
+                            'Plastic Bags': '#034207'}
 
 # get totals by main category
 
-total_litter = df['litter_count'].sum()
-total_litter = int(total_litter)
+#total_litter = df['litter_count'].sum()
+#total_litter = int(total_litter)
 
 bag_count = 30
 
@@ -83,6 +84,9 @@ total_sanitary = mysum('Sanitary')
 total_custom = mysum('Custom_Litter_Type')
 total_industrial = mysum('Industrial')
 total_dogshit = mysum('Pet_Waste')
+total_plastic_bags = mysum('Plastic Bags')
+total_litter = total_softdrinks + total_food + total_other + total_smoking + total_alcohol + total_coffee + total_sanitary + total_custom + total_industrial + total_dogshit + total_plastic_bags
+total_litter = int(total_litter)
 
 total_small_constributors = total_sanitary + total_custom + total_industrial + total_dogshit
 
@@ -248,7 +252,7 @@ app.layout = html.Div([
 
     html.Br(),
 
-    html.H1('Litter Collected',
+    html.H1('Litter Collected at Iowa City Litter Crew Clean Up Events',
             style = {'textAlign': 'center'}),
     
     html.Br(),
@@ -259,7 +263,7 @@ app.layout = html.Div([
                     [
                         dbc.Row([
                             dbc.Col([
-                                html.H4('Bags of Litter Collected by Iowa City Litter Crew at Pick Up Events', className='card-title'),
+                                html.H4('Bags of Litter Collected', className='card-title'),
                                
                                 DashIconify(icon="f7:trash",
                                     width=30), 
@@ -349,7 +353,7 @@ app.layout = html.Div([
 
     html.Br(),
 
-    html.H1('Litter Data',
+    html.H1('Litter Data Collected by Individual Contributors',
            style = {'textAlign': 'center'}),
     
     html.Br(),
@@ -367,14 +371,14 @@ app.layout = html.Div([
                     [
                         dbc.Row([
                             dbc.Col([
-                                html.H4('Total Litter Collected', className='card-title'),
-                                DashIconify(icon="f7:trash",
-                                    width=30)                            
+                                html.H4('Total Litter Collected', className='card-title',
+                                        style={'textAlign': 'center',
+                                              'fontSize': 40})                         
                             ]),
                             dbc.Col([
                                 html.P(total_litter, 
                                        className= 'card-text',
-                                       style={'textAlign': 'right',
+                                       style={'textAlign': 'center',
                                               'fontSize': 40},
                                        )
                             ]), 
@@ -382,8 +386,11 @@ app.layout = html.Div([
                         
                     ]
                 )
-        ],color = 'lightgrey', inverse = False)
+        ],color = 'darkorange', inverse = False)
         ]),
+    ]),
+
+    dbc.Row([    
 
         dbc.Col([
             dbc.Card([
@@ -441,11 +448,36 @@ app.layout = html.Div([
                         dbc.Row([
                             dbc.Col([
                                 html.H4('Other', className='card-title'),
-                                DashIconify(icon="material-symbols:shopping-bag-outline",
+                                DashIconify(icon="flowbite:teddy-bear-outline",
                                     width=30)
                             ]),
                             dbc.Col([
                                 html.P(total_other, 
+                                        className= 'card-text',
+                                        style={'textAlign': 'right',
+                                                'fontSize': 40},
+                                        )
+                            ]),
+                        ])
+                        
+                    ]
+                )
+            ],color = 'lightgrey', inverse = False)
+        ]),
+
+
+                dbc.Col([
+            dbc.Card([
+                dbc.CardBody(
+                    [
+                        dbc.Row([
+                            dbc.Col([
+                                html.H4('Plastic Bags', className='card-title'),
+                                DashIconify(icon="material-symbols:shopping-bag-outline",
+                                    width=30)
+                            ]),
+                            dbc.Col([
+                                html.P(total_plastic_bags, 
                                         className= 'card-text',
                                         style={'textAlign': 'right',
                                                 'fontSize': 40},
@@ -707,12 +739,12 @@ app.layout = html.Div([
         placeholder = 'Select a litter type...',
         multi=True,
         value = ['Alcohol','Coffee', 'Custom_Litter_Type','Food', 'Industrial',
-                 'Other', 'Pet_Waste', 'Sanitary', 'Smoking', 'Softdrinks'],
+                 'Other', 'Pet_Waste','Plastic Bags' ,'Sanitary', 'Smoking', 'Softdrinks'],
         clearable = True,
         searchable = True,
         options = [{'label': main_category,
                    'value': main_category}
-                   for main_category in sorted(df['main_category'].unique())], style={'width': '70%',
+                   for main_category in sorted(df['main_category'].unique())], style={'width': '80%',
                                                                                       'height': '100%',
                                                                                       'font-size': 25}),
 
@@ -899,6 +931,57 @@ dbc.Row([
 html.Br(),
 html.Br(),
 html.Br(),
+
+    html.H3('Links',
+                    style = {'textAlign':'center'}),
+    html.Br(),
+
+    dbc.Row([
+        dbc.Col([dbc.Button('Iowa City Litter Crew on Meetup',
+                                   href = 'https://www.meetup.com/iowa-city-litter-crew/',
+                                   external_link=True,
+                                   target='_blank',
+                                   style={'background-color':'white',
+                                          'color': 'steelblue',
+                                          'font-size':'25px',
+                                          'font-face':'bold'}),
+        ], className="d-grid gap-2 col-3 mx-auto"),
+
+        dbc.Col([dbc.Button('Iowa City Litter Crew on Facebook',
+                                   href = 'https://www.facebook.com/groups/iowacitylittercrew/',
+                                   external_link=True,
+                                   target='_blank',
+                                   style={'background-color':'white',
+                                          'color': 'steelblue',
+                                          'font-size':'25px',
+                                          'font-face':'bold'}) 
+    ], className="d-grid gap-2 col-3 mx-auto"),
+
+        dbc.Col([dbc.Button('Open Litter Map',
+                                   href = 'https://openlittermap.com/',
+                                   external_link=True,
+                                   target='_blank',
+                                   style={'background-color':'white',
+                                          'color': 'steelblue',
+                                          'font-size':'25px',
+                                          'font-face':'bold'}) 
+    ], className="d-grid gap-2 col-3 mx-auto"),
+
+                dbc.Col([dbc.Button('Iowa City Map on Open Litter Map',
+                                   href = 'https://openlittermap.com/global?lat=41.643278356724&lon=-91.514504011989&zoom=14',
+                                   external_link=True,
+                                   target='_blank',
+                                   style={'background-color':'white',
+                                          'color': 'steelblue',
+                                          'font-size':'25px',
+                                          'font-face':'bold'}) 
+    ], className="d-grid gap-2 col-3 mx-auto"),
+
+    ]),
+
+    html.Br(),
+    html.Br(),
+    html.Br(),
 
 
     dbc.Row([
