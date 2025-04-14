@@ -77,19 +77,15 @@ base_columns = ['id', 'verification','phone', 'date_taken', 'date_taken_date', '
 ######################################################                         #################################################################
 
 #%% Import Data
-#litter = pd.read_csv('Data\\OpenLitterMap.csv', dtype={'custom_tag_1':'string',
-#                                                        'custom_tag_2':'string',
-#                                                        'custom_tag_3':'string'})
+litter = pd.read_csv('Data\\OpenLitterMap.csv')
 
-#litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
+litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
 
 # herokuapp
-litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'), dtype={'custom_tag_1':'string',
-                                                                    'custom_tag_2':'string',
-                                                                    'custom_tag_3':'string'})
+#litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'))
 
 # herokuapp - load meetup event data
-litter_event = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
+#litter_events = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
 
 #%% make dates date data type
 litter['date_taken'] = pd.to_datetime(litter['date_taken'])
@@ -148,7 +144,7 @@ litter_ct_brands = litter_ct_brands.rename(columns = {'sub_cat_2': 'main_categor
 
 
 litter_ct_brands['sub_category'] = litter_ct_brands['sub_category'].str.strip()
-'''
+
 litter_ct_brands_piv = litter_ct_brands.groupby('sub_category').agg(
      litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
 ).reset_index()
@@ -157,13 +153,9 @@ litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', asc
 
 #litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
 
-
 litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
 litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
                                                 'litter_count': 'Litter Count'})
-
-litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
-'''
 
 litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
 litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
@@ -264,26 +256,6 @@ litter_industrial = litter.iloc[:,col_names_index[8]:col_names_index[9]]
 litter_industrial = clean_subset(litter_industrial, 'industrial')
 
 
-litter_brands = litter.iloc[:,col_names_index[9]:col_names_index[10]]
-litter_brands = clean_subset(litter_brands, 'brand_name')
-litter_brands = pd.concat([litter_ct_brands, litter_brands], ignore_index=True)
-
-
-litter_ct_brands_piv = litter_brands.groupby('sub_category').agg(
-     litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
-).reset_index()
-
-litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', ascending=False).reset_index()
-
-#litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
-
-litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
-litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
-                                                'litter_count': 'Litter Count'})
-
-litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
-
-
 #litter_brands = litter_ct_brands
 
 
@@ -307,6 +279,10 @@ litter_other['sub_category'] = (litter_other['sub_category']
                                 .str.replace('balloons.1', 'balloons', regex=False))
 
 litter_other = pd.concat([litter_other, litter_ct_other])
+
+# split out plastic bags from other to a main category
+
+litter_other.loc[litter_other['sub_category'] == 'plastic_bags', 'main_category'] = 'Plastic Bags'
 
 #%% Combine data subsets into one data frame
 litter_categories = pd.concat([litter_smoking, litter_food, litter_coffee, litter_alcohol,
@@ -599,21 +575,19 @@ litter_sum = pd.merge(litter_sum, df_latlon, on = 'add_block_num_st', how = 'lef
 
 #%% create place_name chart
 
-pl_name = litter[['id', 'place_name','street_address' ,'litter_count']]
+pl_name = litter[['id', 'place_name', 'litter_count']]
 
 pl_name = pl_name.dropna(axis = 0).reset_index()
 
-pl_name['place_street'] = pl_name['place_name'] + ' on ' + pl_name['street_address']
+pl_name = pl_name[['place_name', 'litter_count']]
 
-pl_name = pl_name[['place_street', 'litter_count']]
-
-pl_name = pl_name.groupby(['place_street']).agg(
+pl_name = pl_name.groupby(['place_name']).agg(
      litter_count = pd.NamedAgg(column = 'litter_count', aggfunc='sum')
 )
 
 pl_name = pl_name.sort_values('litter_count', ascending=False).reset_index()
-pl_name_fin = pl_name[['place_street', 'litter_count']]
-pl_name_fin = pl_name_fin.rename(columns = {'place_street': 'Business Location',
+pl_name_fin = pl_name[['place_name', 'litter_count']]
+pl_name_fin = pl_name_fin.rename(columns = {'place_name': 'Business Location',
                                             'litter_count': 'Litter Count'})
 
 #%%
