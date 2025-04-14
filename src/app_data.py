@@ -675,6 +675,10 @@ update_time(myid = 512592, mydate = '2024-08-14 13:58:00')
 # August 20th, 2024
 update_time(myid = 513314, mydate = '2024-08-20 20:40:00')
 
+# March 27th, 2025
+update_time(myid = 521878, mydate = '2025-03-27 22:40:00')
+update_time(myid = 521879, mydate = '2025-03-27 22:42:00')
+
 
 #%% split out litter pickups throughout the day by am/pm
 # the time stamp is on gmt time, so when I walk Lulu is PM (AM CST) and when I walk Kipper is AM (PM CST).
