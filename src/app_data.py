@@ -77,15 +77,15 @@ base_columns = ['id', 'verification','phone', 'date_taken', 'date_taken_date', '
 ######################################################                         #################################################################
 
 #%% Import Data
-litter = pd.read_csv('Data\\OpenLitterMap.csv')
+#litter = pd.read_csv('Data\\OpenLitterMap.csv')
 
-litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
+#litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
 
 # herokuapp
-#litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'))
+litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'))
 
 # herokuapp - load meetup event data
-#litter_events = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
+litter_events = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
 
 #%% make dates date data type
 litter['date_taken'] = pd.to_datetime(litter['date_taken'])
