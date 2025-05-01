@@ -81,11 +81,24 @@ base_columns = ['id', 'verification','phone', 'date_taken', 'date_taken_date', '
 
 #litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
 
+#bus_stops = pd.read_csv('Data\\bus_stops.csv')
+
 # herokuapp
 litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'))
 
 # herokuapp - load meetup event data
 litter_event = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
+
+#%%
+
+litter_event_piv = litter_event.groupby(['Location']).agg({
+    'lat': 'first',
+    'lon': 'first',
+    'Bags Picked Up': 'sum',
+    'Attendee Count': 'sum'
+}).reset_index()
+
+
 
 #%% make dates date data type
 litter['date_taken'] = pd.to_datetime(litter['date_taken'])
@@ -156,6 +169,8 @@ litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', asc
 litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
 litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
                                                 'litter_count': 'Litter Count'})
+
+litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
 
 litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
 litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
@@ -286,7 +301,7 @@ litter_other.loc[litter_other['sub_category'] == 'plastic_bags', 'main_category'
 
 #%% Combine data subsets into one data frame
 litter_categories = pd.concat([litter_smoking, litter_food, litter_coffee, litter_alcohol,
-                               litter_softdrinks, litter_sanitary, litter_coastal, litter_dumping,
+                               litter_softdrinks, litter_sanitary, litter_dumping,
                                litter_industrial, litter_dogshit, litter_other], axis= 0)
 # %% Delete all the data frames and clear memory
 
@@ -587,6 +602,8 @@ pl_name = pl_name.groupby(['place_name']).agg(
 
 pl_name = pl_name.sort_values('litter_count', ascending=False).reset_index()
 pl_name_fin = pl_name[['place_name', 'litter_count']]
+
+pl_name_fin['place_name'] = pl_name_fin['place_name'].replace('L&M Mighty Shop', 'Ralston Creek at Burlington & S Van Buren')
 pl_name_fin = pl_name_fin.rename(columns = {'place_name': 'Business Location',
                                             'litter_count': 'Litter Count'})
 
@@ -728,7 +745,8 @@ avg_duration = round(durations_piv['duration_mins'].mean(),0).astype(int)
 avg_litter_per_min = round(durations_piv['litter_per_min'].mean(),0).astype(int)
 
 
-#%% clean up environment
+#%% Bus Stops
+
 
 
 
