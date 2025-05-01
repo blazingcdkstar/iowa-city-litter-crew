@@ -542,49 +542,49 @@ app.layout = html.Div([
             html.Br(),
             html.Br(),
 
-                html.H3('Before and After Photos - Whispering Meadows Wetland, March 2025',
-                style = {'textAlign': 'center'}),
+               # html.H3('Before and After Photos - Whispering Meadows Wetland, March 2025',
+               # style = {'textAlign': 'center'}),
 
-            html.Br(),
-            html.Br(),
-            html.Br(),
+           # html.Br(),
+           # html.Br(),
+           # html.Br(),
 
 
-                dbc.Row([
-                    dbc.Col([
+            #    dbc.Row([
+            #        dbc.Col([
                             #html.H4("Whispering Meadows Wetland - March 2025"),
-                            BeforeAfter(
-                            before=dict(src="/assets/B_Before_WMW.jpg"),
-                            after=dict(src="/assets/B_AFter_WMW.jpg"),
+            #                BeforeAfter(
+            #                before=dict(src="/assets/B_Before_WMW.jpg"),
+            #                after=dict(src="/assets/B_AFter_WMW.jpg"),
                             #width="256",
-                            height="500",
-                            hover='March 2025: Whispering Meadows Wetland'
-                        )
-                    ], width = 4),
+            #                height="500",
+            #                hover='March 2025: Whispering Meadows Wetland'
+            #            )
+            #        ], width = 4),
 
-                        dbc.Col([
+            #           dbc.Col([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
-                            BeforeAfter(
-                            before=dict(src="/assets/C_Before_WMW.jpg"),
-                            after=dict(src="/assets/C_AFter_WMW.jpg"),
+            #                BeforeAfter(
+            #                before=dict(src="/assets/C_Before_WMW.jpg"),
+            #                after=dict(src="/assets/C_AFter_WMW.jpg"),
                             #width="256",
-                            height="500",
-                            hover='March 2025: Whispering Meadows Wetland'
-                        )
-                    ], width = 4),
+            #                height="500",
+            #                hover='March 2025: Whispering Meadows Wetland'
+            #            )
+            #        ], width = 4),
 
-                dbc.Col([
+            #    dbc.Col([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
-                        BeforeAfter(
-                        before=dict(src="/assets/A_Before_WMW.jpg"),
-                        after=dict(src="https://github.com/blazingcdkstar/iowa-city-litter-crew/blob/main/src/assets/A_After_WMW.jpg"),
+            #            BeforeAfter(
+            #            before=dict(src="/assets/A_Before_WMW.jpg"),
+            #            after=dict(src="https://github.com/blazingcdkstar/iowa-city-litter-crew/blob/main/src/assets/A_After_WMW.jpg"),
                         #width="256",
-                        height="500",
-                        hover='March 2025: Whispering Meadows Wetland'
-                    )
-                ], width = 4)  # row 401
+            #            height="500",
+            #            hover='March 2025: Whispering Meadows Wetland'
+            #        )
+            #    ], width = 4)  # row 401
 
-                 ]),
+            #     ]),
         
             html.Br(),
             html.Br(),
