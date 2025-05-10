@@ -271,8 +271,9 @@ litter_industrial = litter.iloc[:,col_names_index[8]:col_names_index[9]]
 litter_industrial = clean_subset(litter_industrial, 'industrial')
 
 
-#litter_brands = litter_ct_brands
-
+litter_brands = litter.iloc[:,col_names_index[9]:col_names_index[10]]
+litter_brands = clean_subset(litter_brands, 'brands')
+litter_brands['main_category'] = 'brand_name'
 
 litter_dogshit = litter.iloc[:,col_names_index[10]:col_names_index[11]]
 litter_dogshit = clean_subset(litter_dogshit, 'dogshit')
@@ -298,6 +299,32 @@ litter_other = pd.concat([litter_other, litter_ct_other])
 # split out plastic bags from other to a main category
 
 litter_other.loc[litter_other['sub_category'] == 'plastic_bags', 'main_category'] = 'Plastic Bags'
+#%% combine custom tab and regular brands
+
+litter_ct_brands = pd.concat([litter_ct_brands, litter_brands])
+
+
+
+
+litter_ct_brands_piv = litter_ct_brands.groupby('sub_category').agg(
+     litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
+).reset_index()
+
+litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', ascending=False).reset_index()
+
+#litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
+
+litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
+litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
+                                                'litter_count': 'Litter Count'})
+
+litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
+
+litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
+litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
+litter_ct_other = litter_ct_other.rename(columns = {'sub_cat_2': 'main_category',
+                                           'sub_cat_3': 'sub_category'})
+
 
 #%% Combine data subsets into one data frame
 litter_categories = pd.concat([litter_smoking, litter_food, litter_coffee, litter_alcohol,
