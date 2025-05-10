@@ -74,6 +74,11 @@ columnDefs = [{"field": i} for i in ["Business Location", "Litter Count"]]
 columnDefsBrands = [{"field": i} for i in ["Brand Name", "Litter Count"]]
 
 
+# beforeAfter image urls
+
+
+img_b4a_4 = "https://github.com/blazingcdkstar/iowa-city-litter-crew/blob/main/src/assets/A_After_WMW.jpg"
+
 
 # tab styles
 
@@ -81,28 +86,33 @@ tabs_styles = {
     'height': '60px'
 }
 tab_style = {
-    'height': '60px',
-    'borderBottom': '1px solid #479F4D',
-    'borderTop': '1px solid #479F4D',
+    'height': '80px',
+    'borderBottom': '2px solid #479F4D',
+    'borderTop': '3px solid #479F4D',
+    'borderLeft': '3px solid #479F4D',
+    'borderRight': '3px solid #479F4D',
     'padding': '6px',
     'fontWeight': 'bold',
+    'backgroundColor':'lightgrey',
     'color': myblue,
     'padding': '6px',
     'fontWeight': 'bold',
-    'font-size': '1.3em'
+    'font-size': '1.4em'
 }
 
 tab_selected_style = {
-    'height': '60px',
-    'borderTop': '2px solid #479F4D',
+    'height': '80px',
     'borderBottom': '2px solid #479F4D',
-    'borderLeft': '2px solid #479F4D',
-    'borderRight': '2px solid #479F4D',
-    'backgroundColor': mycardgrey,
+    'borderTop': '3px solid #479F4D',
+    'borderLeft': '3px solid #479F4D',
+    'borderRight': '3px solid #479F4D',
+    'padding': '6px',
+    'fontWeight': 'bold',
+    'backgroundColor':'#abb2b9',
     'color': myblue,
     'padding': '6px',
     'fontWeight': 'bold',
-    'font-size': '1.3em'
+    'font-size': '1.4em'
 }
 
 
@@ -287,6 +297,7 @@ app = Dash(__name__,
            meta_tags=[{'name': 'viewport',
                       'content': 'width=device-width, initial-scale=1.0, maximum-scale=1.2, minimum-scale=0.5,'}]
                 )
+
 server = app.server
 app.layout = html.Div([
     dcc.Tabs([
@@ -302,11 +313,46 @@ app.layout = html.Div([
                         html.Br(),
                         html.H3('Upcoming Events',
                                 style = {'textAlign': 'left',
-                                'paddingLeft':'20px'}),
+                                'paddingLeft':'20px',
+                                'font-weight':'bold'}),
                         html.H4(dcc.Markdown('5/14/2025: Tabling at [Prairie Preview.](https://buroaklandtrust.org/prairie-preview-turns-40-and-were-celebrating/)',
                                               link_target="_blank"),
                                 style = {'textAlign': 'left',
-                                'paddingLeft':'25px'})
+                                'paddingLeft':'30px'}),
+
+
+                        html.H4(dcc.Markdown('5/17/2025: Learn How to Use Open Litter Map - [Event Details.](https://www.meetup.com/iowa-city-litter-crew/events/307700150/?eventOrigin=group_upcoming_events)',
+                                              link_target="_blank"),
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'30px'}),
+                        
+
+                        html.H4(dcc.Markdown('6/8/2025: Cleanup at Whispering Meadows Wetland - Details Coming Soon!',
+                                              link_target="_blank"),
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'30px'}),
+
+                        
+                        html.Br(),
+                        html.Br(),
+                        html.H3('Past Collaborations',
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'20px',
+                                'font-weight':'bold'}),
+                        html.H4(dcc.Markdown('4/27/2025: South of 6 District Team Up to Clean Up',
+                                              link_target="_blank"),
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'30px'}),
+
+
+                        html.H4(dcc.Markdown('4/19/2025: Coralville Litter Crew Kickoff and Cleanup',
+                                              link_target="_blank"),
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'30px'}),
+                        
+
+                        
+
 
 
                     ]),      
@@ -343,6 +389,11 @@ app.layout = html.Div([
                 html.Br(),
 
                     dbc.Row([
+                         html.H2("Connect with ICLC online!!",
+                        style = {'textAlign': 'left',
+                                'paddingLeft':'25px'}),
+                        html.Br(),
+                        html.Br(),
                         dbc.Col([dbc.Button('Iowa City Litter Crew on Meetup',
                                                 href = 'https://www.meetup.com/iowa-city-litter-crew/',
                                                 external_link=True,
@@ -380,6 +431,12 @@ app.layout = html.Div([
                     html.Br(),
 
                     dbc.Row([
+
+                        html.H2("Get started with Open Litter Map and Litter Bingo!!",
+                        style = {'textAlign': 'left',
+                                'paddingLeft':'25px'}),
+                        html.Br(),
+                        html.Br(),
                         dbc.Col([dbc.Button('Open Litter Map',
                                                 href = 'https://openlittermap.com/',
                                                 external_link=True,
@@ -399,6 +456,18 @@ app.layout = html.Div([
                                                         'font-size':'25px',
                                                         'font-face':'bold'}) 
                     ],className="d-grid gap-2 col-3 mx-auto"),
+
+                    dbc.Col([dbc.Button('Printer Friendly Litter Bingo',
+                                                href = '/assets/Litter_Bingo_text-only.pdf',
+                                                external_link=True,
+                                                target='_blank',
+                                                style={'background-color':myblue,
+                                                        'color': 'white',
+                                                        'font-size':'25px',
+                                                        'font-face':'bold'}) 
+                    ],className="d-grid gap-2 col-3 mx-auto"),
+
+                    
          
                     
                     ], justify = 'center')
@@ -542,49 +611,49 @@ app.layout = html.Div([
             html.Br(),
             html.Br(),
 
-               # html.H3('Before and After Photos - Whispering Meadows Wetland, March 2025',
-               # style = {'textAlign': 'center'}),
+                html.H3('Before and After Photos - Whispering Meadows Wetland, March 2025',
+                style = {'textAlign': 'center'}),
 
-           # html.Br(),
-           # html.Br(),
-           # html.Br(),
+            html.Br(),
+            html.Br(),
+            html.Br(),
 
 
-            #    dbc.Row([
-            #        dbc.Col([
+                dbc.Row([
+                    dbc.Col([
                             #html.H4("Whispering Meadows Wetland - March 2025"),
-            #                BeforeAfter(
-            #                before=dict(src="/assets/B_Before_WMW.jpg"),
-            #                after=dict(src="/assets/B_AFter_WMW.jpg"),
+                            BeforeAfter(
+                            before=dict(src="/assets/A_Before_WMW.jpg"),
+                            after=dict(src="/assets/A_AFter_WMW.jpg"),
                             #width="256",
-            #                height="500",
-            #                hover='March 2025: Whispering Meadows Wetland'
-            #            )
-            #        ], width = 4),
+                            height="500",
+                            hover='March 2025: Whispering Meadows Wetland'
+                        )
+                    ], width = 4),
 
-            #           dbc.Col([
+                        dbc.Col([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
-            #                BeforeAfter(
-            #                before=dict(src="/assets/C_Before_WMW.jpg"),
-            #                after=dict(src="/assets/C_AFter_WMW.jpg"),
+                            BeforeAfter(
+                            before=dict(src="/assets/B_Before_WMW.jpg"),
+                            after=dict(src="/assets/B_AFter_WMW.jpg"),
                             #width="256",
-            #                height="500",
-            #                hover='March 2025: Whispering Meadows Wetland'
-            #            )
-            #        ], width = 4),
+                            height="500",
+                            hover='March 2025: Whispering Meadows Wetland'
+                        )
+                    ], width = 4),
 
-            #    dbc.Col([
+                dbc.Col([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
-            #            BeforeAfter(
-            #            before=dict(src="/assets/A_Before_WMW.jpg"),
-            #            after=dict(src="https://github.com/blazingcdkstar/iowa-city-litter-crew/blob/main/src/assets/A_After_WMW.jpg"),
+                        BeforeAfter(
+                        before=dict(src="/assets/C_Before_WMW.jpg"),
+                        after=dict(src="/assets/C_AFter_WMW.jpg"),
                         #width="256",
-            #            height="500",
-            #            hover='March 2025: Whispering Meadows Wetland'
-            #        )
-            #    ], width = 4)  # row 401
+                        height="500",
+                        hover='March 2025: Whispering Meadows Wetland'
+                    )
+                ], width = 4),  # row 401
 
-            #     ]),
+                 ]),
         
             html.Br(),
             html.Br(),
@@ -593,7 +662,7 @@ app.layout = html.Div([
 
 
 
-        dcc.Tab(label='Litter Data Collected by Individual Contributors', style = tab_style, selected_style = tab_selected_style,
+        dcc.Tab(label='Explore Litter Data', style = tab_style, selected_style = tab_selected_style,
                 children=[
             html.Br(),
             html.H1('Litter AND Litter Data Collected by Individual Contributors',
@@ -1066,20 +1135,20 @@ app.layout = html.Div([
 
                 ]), # tab closure 831
         
-        dcc.Tab(label='Litter Bingo', style = tab_style, selected_style = tab_selected_style,
-                children=[
-                    dbc.Col([        
-                    dbc.Row([
-                        dbc.CardImg(src="/assets/litter_bingo.jpg", bottom=True,                             
-                                style = {'height':'50%',
-                                'width': '50%',
-                                }
-                                    ), 
+        #dcc.Tab(label='How to Get Started', style = tab_style, selected_style = tab_selected_style,
+        #        children=[
+        #            dbc.Col([        
+        #            dbc.Row([
+        #                dbc.CardImg(src="/assets/litter_bingo.jpg", bottom=True,                             
+        #                        style = {'height':'50%',
+        #                        'width': '50%',
+        #                        }
+        #                            ), 
 
 
-                    ], justify = 'center') # row
-                ]), # col
-                ])
+        #            ], justify = 'center') # row
+        #        ]), # col
+        #       ]) # tab closure 1138
 
             ], id='mytabs'), # tabs closure 230
 
