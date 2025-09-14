@@ -437,7 +437,7 @@ app.layout = html.Div([
 
 
                         dbc.Col([dbc.Button('Email the Iowa City Litter Crew',
-                                                    href = 'mailto:iclittercrew@gmail.com',
+                                                    href = 'mailto:iowacitylittercrew@gmail.com',
                                                     external_link=True,
                                                     target='_blank',
                                                     style={'background-color':myblue,
