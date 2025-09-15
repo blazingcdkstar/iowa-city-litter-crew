@@ -646,7 +646,7 @@ app.layout = html.Div([
                             #html.H4("Whispering Meadows Wetland - March 2025"),
                             BeforeAfter(
                             before=dict(src="/assets/A_Before_WMW.jpg"),
-                            after=dict(src="/assets/A_AFter_WMW.jpg"),
+                            after=dict(src="/assets/A_After_WMW.jpg"),
                             #width="256",
                             height="500",
                             hover='March 2025: Whispering Meadows Wetland'
@@ -657,7 +657,7 @@ app.layout = html.Div([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
                             BeforeAfter(
                             before=dict(src="/assets/B_Before_WMW.jpg"),
-                            after=dict(src="/assets/B_AFter_WMW.jpg"),
+                            after=dict(src="/assets/B_After_WMW.jpg"),
                             #width="256",
                             height="500",
                             hover='March 2025: Whispering Meadows Wetland'
@@ -668,7 +668,7 @@ app.layout = html.Div([
                         #html.H4("Whispering Meadows Wetland - March 2025"),
                         BeforeAfter(
                         before=dict(src="/assets/C_Before_WMW.jpg"),
-                        after=dict(src="/assets/C_AFter_WMW.jpg"),
+                        after=dict(src="/assets/C_After_WMW.jpg"),
                         #width="256",
                         height="500",
                         hover='March 2025: Whispering Meadows Wetland'
