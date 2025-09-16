@@ -161,7 +161,8 @@ litter_event_piv = events.groupby(['Location']).agg({
     'lat': 'first',
     'lon': 'first',
     'Bags Picked Up': 'sum',
-    'Attendee Count': 'sum'
+    'Attendee Count': 'sum',
+    'Date': 'count'
 }).reset_index()
 
 
@@ -177,7 +178,8 @@ event_density_fig = px.scatter_mapbox(litter_event_piv, lat="lat", lon="lon",
                                     'lat': False,
                                     'lon': False,
                                     'Location': True,
-                                    'Attendee Count': True},
+                                    'Attendee Count': True,
+                                    'Date': True},
                         #labels = {'add_block_num_st': 'Street Block',
                         #          'total_count_pickup_dates': 'Count of Outings',
                         #          'avg_litter_pickedup': 'Average Litter Picked Up'}
@@ -270,7 +272,9 @@ density_fig = px.scatter_mapbox(df_piv_three, lat="min_lat", lon="min_lon",
                                     'min_lat': False,
                                     'min_lon': False,
                                     'add_block_num_st': True,
-                                    'total_count_pickup_dates': True},
+                                    'total_count_pickup_dates': True,
+                                    #'size': False
+                                    },
                         labels = {'add_block_num_st': 'Street Block',
                                   'total_count_pickup_dates': 'Count of Outings',
                                   'avg_litter_pickedup': 'Average Litter Picked Up'}
@@ -350,6 +354,12 @@ app.layout = html.Div([
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'20px',
                                 'font-weight':'bold'}),
+
+                        html.H4(dcc.Markdown('6/8/2025: [Whispering Meadows Cleanup with RSFIC and Iowa City Parks and Rec Support](https://na01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1CSRgVjQxe%2F&data=05%7C02%7C%7C461e6e1fcda94b39b5b308ddf54b626c%7C84df9e7fe9f640afb435aaaaaaaaaaaa%7C1%7C0%7C638936426345838119%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=V7oNQMmUGlXIWPrwfqoHtYyvpNsQJ5uVtjQU%2Bqwj84k%3D&reserved=0)',
+                                              link_target="_blank"),
+                                style = {'textAlign': 'left',
+                                'paddingLeft':'30px'}),
+
                         html.H4(dcc.Markdown('4/27/2025: South of 6 District Team Up to Clean Up',
                                               link_target="_blank"),
                                 style = {'textAlign': 'left',
@@ -1204,13 +1214,15 @@ def density_map(mycategory, start_date, end_date):
     fig = px.scatter_mapbox(temp_df, lat="lat", lon="lon",    
                             color="main_category", 
                             #size="litter_count",
-                            size = temp_df['litter_count'] * 2,
-                            zoom=11,
+                            size = temp_df['litter_count'],
+                            zoom=13,
                             color_discrete_map=color_discrete_map,
                             hover_data={'litter_count': True,
                                     'lat': False,
                                     'lon': False,
-                                    'main_category': True},
+                                    'main_category': True,
+                                    #'size': False
+                                    },
                             labels = {'litter_count': 'Litter Count',
                                       'main_category': 'Litter Type'})
     
