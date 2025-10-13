@@ -1,1407 +1,781 @@
-from dash import Dash, dcc, html, Input, Output, dash_table # pip install dash
-import dash_bootstrap_components as dbc 
-from dash.exceptions import PreventUpdate
-from dash_iconify import DashIconify
-from dash import dash_table
-import dash_ag_grid as dag
-from dash_extensions import BeforeAfter
-from dash_extensions.enrich import DashProxy, html
+'''
+Overall Process
 
-# import data libraries
-import pandas as pd  # pip install pandas
-import datetime as dt # pip install datetime
-import numpy as np    # pip install numpy
+Step 1: Import packages and create base columns variable.
+Step 2: Import and formate data
+Step 3: Create dataframe named litter_base with id vars
+Step 4: Reshape data from wide to long, so that a unique record is the combination of the id and the item. 
+        1 id is tied to 1 photo, and a photo can include more than 1 litter.
 
+        a. Create data frame to capture the custom tag items. 
+            - the custom tag columns contain column headers, not values, so this has to be reshaped 
+              separately, and then added back to the dataframe at the end. I only do this for custom_tag_1. The dataframe
+              will have columns: 'id', 'main_category', 'sub_category', and 'value'.
+        
+        b. Identify the column headers that are in all upper case. These are dummy columns to identify the main categorization
+           of the litter item, they contain no data. Create a new dataframe for each main category with columns: 'id', 'main_category', 
+           'sub_category', and 'value'. 
+           The main categories are:  'alcohol', 'coffee', 'food', 'industrial', 'other', 'sanitary', 'softdrinks'
 
-# plotting packages
-import plotly.graph_objects as go #pip install plotly
+           
+
+Step 5: Reshape address column. The address column is 1 long string with address components separated by commas. 
+        I split out each component of the address field into separate columns. There are some irregularities with this data. For example,
+        some records have place names rather than the street address, or some have a neighborhood designation and others do not. To facilitate
+        litter by street block aggregation, I replace the place names with the street address. I remove the neighborhood designations so 
+        that all addresses have the same number of components. After these steps there are addresses with 5 or 6 components. For those with 
+        5 components are missing a house number. I add the column and fill with 0. This data is brought back together and then joined
+        with the base data.
+
+Exclusions:
+I exclude the columns for brand and material identification. I have not done this identification with my data.
+
+Variance:
+There is a small variance between the sum of the total column in the raw data and the sum total in my final output.
+This is because there is not a value in the total column in the raw data for items that are categorized in the custom_tag_1 column,
+and because there are a handful of items where there is a flag for the item and for the material, and these
+are getting double counted in the total column in the raw data, but they are counted once in my output.
+
+Variance Examples:
+ID 449030 is counted twice, as a straw and as plastic in the raw source data.
+ID 459532 is custom tagged as a hair net, and has no value in the total column in the raw source data.
+
+'''
+#%%
+#######################################################                             ############################################################
+####################################################### < Step 1: Import Packages > ############################################################
+#######################################################                             ############################################################
+
+#%% Import Packages
+
+# Data packages
+import pandas as pd
+pd.options.mode.chained_assignment = None
+
+import numpy as np
+import gc
+import re
+
 import plotly.express as px
 
-
-# load data wrangling module
-import app_data as ad
-
-df = ad.litter
-df_piv = ad.litter_sum
-brands = ad.litter_ct_brands_piv
-places = ad.pl_name_fin
-events = ad.litter_event
-
-# today
-today = dt.datetime.today().strftime("%Y-%m-%d")
+# durations
+from datetime import datetime
 
 
-myblue = '#072B51'
+# herokuapp
+import pathlib
+PATH=pathlib.Path(__file__).parent
+DATA_PATH = PATH.joinpath('data').resolve()
 
-
-#%% palette
-
-myblue = '#072B51'
-mygreen = '#479F4D'
-
-mypurple = '#510750'
-mybrown = '#512d07'
-mydarkgreen = '#075108'
-mylightblue = '#647a92'
-mylightbrown = '#aa5d18'
-mylightgreen = '#a1c87c'
-mylightpurple = '#702545'
-myaqua = '#649092'
-mylightaqua = '#2a385b'
-myrose = '#9b6c70'
-myyellow = '#9d8d07'
-
-mygrey = '#f4f6f6'
-mycardgrey = '#d6dbdf'
-
-# palette for litter types
-
-color_discrete_map = {'Softdrinks': mypurple,
-                            'Food': myaqua,
-                            'Other': myrose,
-                            'Smoking': mydarkgreen,
-                            'Alcohol': mybrown,
-                            'Coffee': mylightbrown,
-                            'Sanitary': mylightaqua,
-                            'Custom_Litter_Type': myaqua,
-                            'Industrial': 'lightgrey',
-                            'Plastic Bags': mylightgreen,
-                            'Pet_Waste': myyellow}
-
-color_discrete_map_bs = {'Yes': '#00ff00',
-                         'No': '#dc143c'}
-
-
-# column definitions for tables
-columnDefs = [{"field": i} for i in ["Business Location", "Litter Count"]]
-columnDefsBrands = [{"field": i} for i in ["Brand Name", "Litter Count"]]
-
-
-# beforeAfter image urls
-
-
-img_b4a_4 = "https://github.com/blazingcdkstar/iowa-city-litter-crew/blob/main/src/assets/A_After_WMW.jpg"
-
-
-# tab styles
-
-tabs_styles = {
-    'height': '60px'
-}
-tab_style = {
-    'height': '80px',
-    'borderBottom': '2px solid #479F4D',
-    'borderTop': '3px solid #479F4D',
-    'borderLeft': '3px solid #479F4D',
-    'borderRight': '3px solid #479F4D',
-    'padding': '6px',
-    'fontWeight': 'bold',
-    'backgroundColor':'lightgrey',
-    'color': myblue,
-    'padding': '6px',
-    'fontWeight': 'bold',
-    'font-size': '1.4em'
-}
-
-tab_selected_style = {
-    'height': '80px',
-    'borderBottom': '2px solid #479F4D',
-    'borderTop': '3px solid #479F4D',
-    'borderLeft': '3px solid #479F4D',
-    'borderRight': '3px solid #479F4D',
-    'padding': '6px',
-    'fontWeight': 'bold',
-    'backgroundColor':'#abb2b9',
-    'color': myblue,
-    'padding': '6px',
-    'fontWeight': 'bold',
-    'font-size': '1.4em'
-}
-
+# create list of main base columns in dataset
+base_columns = ['id', 'verification','phone', 'date_taken', 'date_taken_date', 'date_taken_yrmth',
+                'date_uploaded', 'lat', 'lon', 'picked up', 'address']
 
 #%%
-#%% create function
+######################################################                         #################################################################
+###################################################### < Step 2: Import Data > #################################################################
+######################################################                         #################################################################
 
-def mysum(main_category):
+#%% Import Data
+#litter = pd.read_csv('Data\\OpenLitterMap.csv')
 
-    temp = df.loc[df['main_category'] == main_category]
-    temp_sum = temp['litter_count'].sum()
-    temp_sum = int(temp_sum)
+#litter_event = pd.read_csv('Data\\Cleanup_Events.csv')
 
-    return(temp_sum)
+#bus_stops = pd.read_csv('Data\\bus_stops.csv')
+
+# herokuapp
+litter = pd.read_csv(DATA_PATH.joinpath('OpenLitterMap.csv'))
+
+# herokuapp - load meetup event data
+litter_event = pd.read_csv(DATA_PATH.joinpath('Cleanup_Events.csv'))
 
 #%%
 
-# litter data totals
-total_softdrinks = mysum('Softdrinks')
-total_food = mysum('Food')
-total_other = mysum('Other')
-total_smoking = mysum('Smoking')
-total_alcohol = mysum('Alcohol')
-total_coffee = mysum('Coffee')
-total_sanitary = mysum('Sanitary')
-total_custom = mysum('Custom_Litter_Type')
-total_industrial = mysum('Industrial')
-total_dogshit = mysum('Pet_Waste')
-total_plastic_bags = mysum('Plastic Bags')
-total_litter = total_softdrinks + total_food + total_other + total_smoking + total_alcohol + total_coffee + total_sanitary + total_custom + total_industrial + total_dogshit + total_plastic_bags
-total_litter = int(total_litter)
-
-total_small_constributors = total_sanitary + total_custom + total_industrial + total_dogshit
-
-# average duration
-myaverage = 'Average time spent picking up litter: ' + str(ad.avg_duration) + ' minutes'
-myavglitter_min = 'Average count of litter picked up per minute: ' + str(ad.avg_litter_per_min) + ' litter'
-
-
-#%%
-# mapbox token
-mytoken = 'pk.eyJ1IjoiY2RrZWxsZXIiLCJhIjoiY2x5bmFnc3J2MDQ1bTJrcHN3bWI3ajNwcyJ9.16DwzQZpCPZbBlkcZg57eA'
-
-#%% Event Density map
-
-litter_event_piv = events.groupby(['Location']).agg({
+litter_event_piv = litter_event.groupby(['Location']).agg({
     'lat': 'first',
     'lon': 'first',
     'Bags Picked Up': 'sum',
-    'Attendee Count': 'sum',
-    'Date': 'count'
+    'Attendee Count': 'sum'
 }).reset_index()
 
 
-bag_count = litter_event_piv['Bags Picked Up'].sum()
-event_density_fig = px.scatter_mapbox(litter_event_piv, lat="lat", lon="lon",    
-                        color='Bags Picked Up', 
-                        size= 'Bags Picked Up',
-                        #size = df_piv_three['avg_litter_pickedup'] * 2,
-                        color_continuous_scale=[myblue, mygreen],
-                        #color_continuous_midpoint=10,
-                        zoom=12,
-                        hover_data={'Bags Picked Up': True,
-                                    'lat': False,
-                                    'lon': False,
-                                    'Location': True,
-                                    'Attendee Count': True,
-                                    'Date': True},
-                        #labels = {'add_block_num_st': 'Street Block',
-                        #          'total_count_pickup_dates': 'Count of Outings',
-                        #          'avg_litter_pickedup': 'Average Litter Picked Up'}
-                        )
 
-event_density_fig.update_layout(font=dict(size=15),
-                                title={
-                                'text': 'Litter Event Locations',
-                                'x': 0.5, # Title position (0-1, where 0.5 is the center)
-                                'xanchor': 'center', # Title alignment ('center', 'left', 'right')
-                                'font': {'size': 20} # Title font size
-    })
-event_density_fig.update_layout(mapbox_accesstoken = mytoken)
+#%% make dates date data type
+litter['date_taken'] = pd.to_datetime(litter['date_taken'])
+litter['date_uploaded'] = pd.to_datetime(litter['date_uploaded'])
+
+litter['date_taken_date'] = litter['date_taken'].dt.floor('d')
+litter['date_taken_yrmth'] = litter['date_taken_date'].apply(lambda x: x.strftime('%Y-%m'))
+
+litter_event['Date'] = pd.to_datetime(litter_event['Date'])
 
 
-events['year'] = events['Date'].dt.year
-litter_event_yr = events.groupby(['year']).agg('Bags Picked Up').sum().reset_index()
+#%%
+######################################################                                           ###############################################
+###################################################### < Step 3: Create Base or Main DataFrame > ###############################################
+######################################################                                           ###############################################
+
+# %% create base df
+litter_base = litter[[c for c in litter.columns if c in base_columns]]
 
 
-tick_labels = litter_event_yr['year'].unique()
-fig_bar_yr = px.bar(data_frame=litter_event_yr, 
-                    x = 'year', y = 'Bags Picked Up',
-                    text=litter_event_yr['Bags Picked Up'])
-fig_bar_yr.update_traces(marker_color = myblue,
-                         hoverinfo = 'none', hovertemplate=None)
-fig_bar_yr.update_layout(
-    xaxis=dict(
-        tickvals=tick_labels,
-        ticktext=tick_labels,
-        showgrid = False,
-        
-        
-    ),
-    yaxis = dict(
-        showgrid = False
-    ),
-    width = 750, height = 600, bargap = 0.70,
-    xaxis_title = 'Year',
-    yaxis_title = None,
-    plot_bgcolor = mygrey,
-    font=dict(size = 20),
-    title={
-        'text': 'Bags of Litter Collected per Year',
-        'x': 0.5, # Title position (0-1, where 0.5 is the center)
-        'xanchor': 'center', # Title alignment ('center', 'left', 'right')
-        'font': {'size': 20} # Title font size
-    }
+#%%
+######################################################                                          #################################################
+###################################################### < Step 4a: Create Custom Tag DataFrame > #################################################
+######################################################                                          #################################################
 
+#%% Organize the data for custom tags
+
+litter_orig = litter
+litter_customtag = litter[['id', 'custom_tag_1']].dropna()
+
+litter_customtag['main_category'] = 'custom_litter_type'
+litter_customtag['value'] = 1.0
+
+litter_customtag = litter_customtag.rename(columns={'custom_tag_1':'sub_category'})
+
+litter_customtag = litter_customtag[['id', 'main_category', 'sub_category', 'value']]
+
+litter_customtag['sub_category'] = litter_customtag['sub_category'].str.lower()
+
+litter_customtag['sub_cat_2'] = ''
+litter_customtag['sub_cat_3'] = ''
+litter_customtag = litter_customtag.reset_index() 
+
+for i in range(len(litter_customtag['id'])):
+     litter_customtag.loc[i,'sub_cat_2'] = litter_customtag.loc[i, 'sub_category'].split(':')[0]
+     litter_customtag.loc[i,'sub_cat_3'] = litter_customtag.loc[i, 'sub_category'].split(':')[1]
+
+
+litter_customtag['sub_cat_2'] = litter_customtag['sub_cat_2'].str.replace('bn', 'brand_name')
+litter_customtag['sub_cat_2'] = litter_customtag['sub_cat_2'].str.replace('ot', 'other')
+
+litter_ct_brands = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'brand_name']
+litter_ct_brands = litter_ct_brands[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
+litter_ct_brands = litter_ct_brands.rename(columns = {'sub_cat_2': 'main_category',
+                                           'sub_cat_3': 'sub_category'})
+
+
+litter_ct_brands['sub_category'] = litter_ct_brands['sub_category'].str.strip()
+
+litter_ct_brands_piv = litter_ct_brands.groupby('sub_category').agg(
+     litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
+).reset_index()
+
+litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', ascending=False).reset_index()
+
+#litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
+
+litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
+litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
+                                                'litter_count': 'Litter Count'})
+
+litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
+
+litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
+litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
+litter_ct_other = litter_ct_other.rename(columns = {'sub_cat_2': 'main_category',
+                                           'sub_cat_3': 'sub_category'})
+
+# remove the custom tag columns from the main dataset
+#litter = litter.loc[:,~litter.columns.str.startswith('custom_tag')]
+#litter = litter.loc[~litter['id'].isin(litter_customtag['id'])]
+
+#%%
+# create chart for brand names
+'''
+bn_chart = px.bar(litter_ct_brands_piv, x = 'litter_count', 
+             y= 'sub_category',
+             color='litter_count',
+             color_continuous_scale=['steelblue', 'darkorange'],
+             hover_data={'litter_count': True,
+                         'sub_category': False},
+             labels={'litter_count': 'Litter Count'},)
+bn_chart.update_layout(yaxis=dict(autorange = 'reversed'))
+bn_chart.update_layout(yaxis_title=None, 
+                  xaxis_title = 'Brands Tagged with 5 Or More Litter Count', 
+                  plot_bgcolor = 'lightgrey')
+'''
+
+
+#%%
+###################################################### < Step 4b: Find Main Category Cols         > ####################################################
+###################################################### < Create function clean_subset             > ####################################################
+###################################################### < Create dataframes for each main category > ####################################################
+###################################################### < and combine back with main base data set > ####################################################
+
+# %% find the columns where the name is all caps. These are the main category columns.
+
+col_names = pd.DataFrame(litter.columns.tolist())
+col_names = col_names.rename(columns = {0: 'col_name'})
+col_names['isupper'] = col_names.loc[col_names['col_name'].str.isupper(), :]
+col_names_all = col_names
+col_names = col_names.dropna()
+col_names_index = col_names.index.tolist()
+
+# %%
+litter_base = litter.loc[:, base_columns]
+
+
+
+#%% Create function to clean susbsetted data for each of the main categories.
+
+# prefix is the main category name
+def clean_subset(df_name,prefix):
+    prefix = prefix + '_'
+    df_name = df_name.rename(columns = lambda s: prefix + s)
+    df_name = pd.concat([litter['id'], df_name], axis=1)
+    df_name = df_name.melt(id_vars = 'id',
+                           var_name = 'sub_category').dropna(subset=['value'])
+    
+    
+    
+    df_name['main_category'] = [x.split('_')[0] for x in df_name['sub_category']]
+    df_name['sub_category'] = df_name['sub_category'].str.replace(prefix, '')
+
+    df_name = df_name[['id', 'main_category', 'sub_category', 'value']]
+
+    return(df_name)
+
+
+#%% Create dataframes for each main category
+
+litter_smoking = litter.iloc[:,col_names_index[0]:col_names_index[1]]
+litter_smoking = clean_subset(litter_smoking, 'smoking')
+
+litter_food = litter.iloc[:,col_names_index[1]:col_names_index[2]]
+litter_food = clean_subset(litter_food, 'food')
+
+litter_coffee = litter.iloc[:,col_names_index[2]:col_names_index[3]]
+litter_coffee = clean_subset(litter_coffee, 'coffee')
+
+litter_alcohol = litter.iloc[:,col_names_index[3]:col_names_index[4]]
+litter_alcohol = clean_subset(litter_alcohol, 'alcohol')
+
+
+litter_softdrinks = litter.iloc[:,col_names_index[4]:col_names_index[5]]
+litter_softdrinks = clean_subset(litter_softdrinks, 'softdrinks')
+
+litter_sanitary = litter.iloc[:,col_names_index[5]:col_names_index[6]]
+litter_sanitary = clean_subset(litter_sanitary, 'sanitary')
+
+litter_coastal = litter.iloc[:,col_names_index[6]:col_names_index[7]]
+litter_coastal = clean_subset(litter_coastal, 'coastal')
+
+
+litter_dumping = litter.iloc[:,col_names_index[7]:col_names_index[8]]
+litter_dumping = clean_subset(litter_dumping, 'dumping')
+
+
+litter_industrial = litter.iloc[:,col_names_index[8]:col_names_index[9]]
+litter_industrial = clean_subset(litter_industrial, 'industrial')
+
+
+litter_brands = litter.iloc[:,col_names_index[9]:col_names_index[10]]
+litter_brands = clean_subset(litter_brands, 'brands')
+litter_brands['main_category'] = 'brand_name'
+
+litter_dogshit = litter.iloc[:,col_names_index[10]:col_names_index[11]]
+litter_dogshit = clean_subset(litter_dogshit, 'dogshit')
+litter_dogshit['main_category'] = 'pet_waste'
+
+litter_other = litter.iloc[:,col_names_index[13]:289]
+litter_other = clean_subset(litter_other, 'other')
+
+litter_other['sub_category'] = (litter_other['sub_category']
+                                .str.replace('plastic.1', 'unknown_plastic', regex=False))
+
+litter_other['sub_category'] = (litter_other['sub_category']
+                                .str.replace('paper.1', 'unknown_paper', regex=False))
+
+litter_other['sub_category'] = (litter_other['sub_category']
+                                .str.replace('metal.1', 'unknown_metal', regex=False))
+
+litter_other['sub_category'] = (litter_other['sub_category']
+                                .str.replace('balloons.1', 'balloons', regex=False))
+
+litter_other = pd.concat([litter_other, litter_ct_other])
+
+# split out plastic bags from other to a main category
+
+litter_other.loc[litter_other['sub_category'] == 'plastic_bags', 'main_category'] = 'Plastic Bags'
+#%% combine custom tab and regular brands
+
+litter_ct_brands = pd.concat([litter_ct_brands, litter_brands])
+
+
+
+
+litter_ct_brands_piv = litter_ct_brands.groupby('sub_category').agg(
+     litter_count = pd.NamedAgg(column = 'value', aggfunc='sum')
+).reset_index()
+
+litter_ct_brands_piv = litter_ct_brands_piv.sort_values(by = 'litter_count', ascending=False).reset_index()
+
+#litter_ct_brands_piv = litter_ct_brands_piv.loc[litter_ct_brands_piv['litter_count'] >= 5]
+
+litter_ct_brands_piv = litter_ct_brands_piv[['sub_category', 'litter_count']]
+litter_ct_brands_piv = litter_ct_brands_piv.rename(columns = {'sub_category':'Brand Name',
+                                                'litter_count': 'Litter Count'})
+
+litter_ct_brands_piv['Brand Name'] = litter_ct_brands_piv['Brand Name'].str.title()
+
+litter_ct_other = litter_customtag.loc[litter_customtag['sub_cat_2'] == 'other']
+litter_ct_other = litter_ct_other[['id', 'sub_cat_2', 'sub_cat_3', 'value']]
+litter_ct_other = litter_ct_other.rename(columns = {'sub_cat_2': 'main_category',
+                                           'sub_cat_3': 'sub_category'})
+
+
+#%% Combine data subsets into one data frame
+litter_categories = pd.concat([litter_smoking, litter_food, litter_coffee, litter_alcohol,
+                               litter_softdrinks, litter_sanitary, litter_dumping,
+                               litter_industrial, litter_dogshit, litter_other], axis= 0)
+# %% Delete all the data frames and clear memory
+
+del [[litter_smoking, litter_food, litter_coffee, litter_alcohol, litter_softdrinks,
+      litter_sanitary, litter_coastal, litter_dumping, litter_industrial, litter_dogshit, 
+      litter_other, litter_customtag]]
+
+gc.collect()
+
+# %% Combine the litter categories to the base litter data frame.
+
+litter = litter_base.merge(litter_categories, how='right', on='id')
+litter=litter.rename(columns = {'value': 'litter_count'})
+litter['main_category'] = litter['main_category'].str.title()
+litter['sub_category'] = litter['sub_category'].str.title()
+
+#%%
+###################################################### < Step 5: Clean and split Address          > ####################################################
+###################################################### < Replace place names with add number      > ####################################################
+###################################################### < Test address component count != 5 or 6   > ####################################################
+###################################################### < Create a subset for 5 and 6 components   > ####################################################
+###################################################### < Create a subset for 5 and 6 components   > ####################################################
+
+#%%
+# Create place name address reference table
+
+place_name_address = [['L&M Mighty Shop', '504']
+                      ,['La Petite Academy', '1504']
+                      ,['Elizabeth Tate Alternative High School', '1528']
+                      ,['Four Seasons Car Wash', '1455']
+                      ,['Periodontal Associates', '1517']
+                      ,['Mergen Orthodontics', '1540']
+                      ,['Lower Muscatine @ Mall Dr', '1800']
+                      ,['Lower Muscatine Ave @ Iowa City Maketplace', '1600']
+                      ,['Kirkwood Community College - Iowa City Campus', '1816']
+                      ,['Sports Column', '12']
+                      ,['Assembly of God Church', '800']
+                      ,['Deli Mart', '1700']
+                      ,['First Christian Church', '200']
+                      ,['Iowa City Public Library', '123']
+                      ,["Jimmy Jack's Rib Shack", '1940']
+                      ,['JOANN Fabrics and Crafts', '1676']
+                      ,["McDonald's", '1861']
+                      ,["Bradley's Cleaners", '19030']
+                      ,['Oyama Sushi', '1853']
+                      ,['Select Physical Therapy', '1555']
+                      ,['Southeast Junior High School', '2501']
+                      ,['Spenler Tire', '1455']
+                      ,['Sycamore Mall', '1660']
+                      ,['The Record Collector', '116']
+                      ,['Wells Fargo', '103']
+                      ,["Sueppel's Flowers", '1501']]
+
+place_name_add_df = pd.DataFrame(place_name_address, columns = ['place_name', 'st_add'])
+                      
+#%%
+street_suffix = ['Avenue', 'Ave', 'Street', 'St', 'Road', 'Rd', 'Drive', 'Dr', 'Boulevard', 'Blvd',
+                 'Lane', 'Ln', 'Circle', 'Place', 'Pl', 'Court', 'Ct']
+
+city_list = ['Iowa City', 'Coralville', 'Des Moines']
+
+state_list = ['Iowa', 'Illinois']
+
+#%%
+
+address_cleanup = litter[['address']]
+address_cleanup['split_count'] = address_cleanup['address'].str.count(',')
+max_split = address_cleanup['split_count'].max()
+
+address_cleanup[['split_1','split_2','split_3','split_4', 'split_5',
+      'split_6', 'split_7', 'split_8', 'split_9']] = address_cleanup['address'].str.split(',', expand = True)
+
+
+address_cleanup = pd.merge(address_cleanup, litter['id'], how = 'left', left_index=True, right_index=True)
+
+
+#%%
+
+''' Create a dataframe with a combined list of all splits, but in a column. So all split values are in one column, 
+a label for which split the value is in, and then a label identifying which part of the address. This will then be re put 
+back togehter in a row format.
+
+COL 1: Litter ID
+COL 2: VALUES FROM EACH OF THE SPLITS
+COL 3: LABEL TO IDENTIFY WHAT PART OF THE ADDRESS THE SPLIT IS.
+
+THEN SPREAD ACROSS COLUMNS BY THE LABEL IN NEW DATA FRAME.
+
+'''
+
+
+split_1 = address_cleanup[['id', 'split_1']]
+split_1['split_label'] = 'split_1'
+split_1 = split_1.rename(columns = {'split_1': 'split_value'})
+
+split_2 = address_cleanup[['id', 'split_2']]
+split_2['split_label'] = 'split_2'
+split_2 = split_2.rename(columns = {'split_2': 'split_value'})
+
+split_3 = address_cleanup[['id', 'split_3']]
+split_3['split_label'] = 'split_3'
+split_3 = split_3.rename(columns = {'split_3': 'split_value'})
+
+split_4 = address_cleanup[['id', 'split_4']]
+split_4['split_label'] = 'split_4'
+split_4 = split_4.rename(columns = {'split_4': 'split_value'})
+
+split_5 = address_cleanup[['id', 'split_5']]
+split_5['split_label'] = 'split_5'
+split_5 = split_5.rename(columns = {'split_5': 'split_value'})
+
+split_6 = address_cleanup[['id', 'split_6']]
+split_6['split_label'] = 'split_6'
+split_6 = split_6.rename(columns = {'split_6': 'split_value'})
+
+split_7 = address_cleanup[['id', 'split_7']]
+split_7['split_label'] = 'split_7'
+split_7 = split_7.rename(columns = {'split_7': 'split_value'})
+
+split_8 = address_cleanup[['id', 'split_8']]
+split_8['split_label'] = 'split_8'
+split_8 = split_8.rename(columns = {'split_8': 'split_value'})
+
+split_9 = address_cleanup[['id', 'split_9']]
+split_9['split_label'] = 'split_9'
+split_9 = split_9.rename(columns = {'split_9': 'split_value'})
+
+comb_splits = pd.concat([split_1, split_2, split_3, split_4, split_5, split_6, split_7, split_8, split_9],
+                        ignore_index=True)
+
+comb_splits['split_value'] = comb_splits['split_value'].str.strip()
+
+comb_splits['split_value'] = comb_splits['split_value'].str.replace('US-IA', 'USA', regex=False)
+comb_splits['split_value'] = comb_splits['split_value'].str.replace('1/2', '', regex=False)
+
+#%%
+comb_splits['is_number'] = ''
+for i in range(len(comb_splits['split_value'])):
+    if comb_splits.loc[i,'split_value'] is None:
+        comb_splits.loc[i,'is_number'] = 'NONE'
+
+    #elif comb_splits[i,'split_value']
+
+    elif re.findall(r'\d+', comb_splits.loc[i,'split_value']) != []:
+        comb_splits.loc[i,'is_number'] = re.findall(r'\d+', comb_splits.loc[i,'split_value'])[0]
+    
+    else:
+        comb_splits.loc[i,'is_number'] = "NA"
+
+
+
+comb_splits['is_text'] = ''
+for i in range(len(comb_splits['split_value'])):
+    if comb_splits.loc[i,'split_value'] is None:
+        comb_splits.loc[i,'is_text'] = 'NONE'
+
+    elif re.findall(r'\D+', comb_splits.loc[i,'split_value']) != []:
+        comb_splits.loc[i,'is_text'] = re.findall(r'\D+', comb_splits.loc[i,'split_value'])[0]
+    
+    else:
+        comb_splits.loc[i,'is_text'] = "NA"
+
+
+comb_splits['last_word'] = comb_splits['split_value'].str.split(" ").str[-1]
+
+
+comb_splits['is_street'] = ''
+for i in range(len(comb_splits['split_value'])):
+    if comb_splits.loc[i,'split_value'] is None:
+        comb_splits.loc[i,'is_street'] = 'NONE'
+
+    else:
+        comb_splits.loc[i,'is_street'] = comb_splits.loc[i,'last_word'] in street_suffix
+
+
+#%%
+
+comb_splits['split_category'] = ''
+for i in range(len(comb_splits['split_value'])):
+                   if comb_splits.loc[i,'split_value'] is None:
+                    comb_splits.loc[i,'is_street'] = 'NONE'
+                    comb_splits.loc[i,'split_category'] = 'NONE'
+
+                   elif pd.to_numeric(comb_splits['is_number'][i], errors='coerce') > 50000:
+                       comb_splits.loc[i,'split_category'] = 'zip'
+
+                   elif (comb_splits.loc[i, 'is_number'] != 'NA' and comb_splits.loc[i,'is_text'] == 'NA') or (comb_splits.loc[i, 'is_number'] != 'NA' and comb_splits.loc[i,'is_text'] == ' ') :
+                       comb_splits.loc[i,'split_category'] = 'address_number'
+                    
+                   elif comb_splits.loc[i, 'is_street'] == True:
+                       comb_splits.loc[i,'split_category'] = 'street_address'
+                    
+                   elif comb_splits.loc[i, 'split_value'] in city_list:
+                       comb_splits.loc[i,'split_category'] = 'city'
+                    
+                   elif comb_splits.loc[i, 'last_word'] == 'County':
+                       comb_splits.loc[i,'split_category'] = 'county'
+                   
+                   elif comb_splits.loc[i, 'is_text'] in state_list:
+                       comb_splits.loc[i,'split_category'] = 'state'
+
+                   elif comb_splits.loc[i, 'is_text'] == 'USA':
+                       comb_splits.loc[i,'split_category'] = 'country'
+                   
+
+                   else: comb_splits.loc[i,'split_category'] = 'place_name'
+                        
+#%%
+
+comb_splits_fin = comb_splits[['id','split_label','split_value', 'split_category']]
+comb_splits_fin['id'] = comb_splits_fin['id'].astype('string')
+
+comb_splits_fin_w = comb_splits_fin.pivot_table(index='id', columns='split_category', values='split_value', aggfunc='max')
+
+comb_splits_fin_w = comb_splits_fin_w[['address_number','place_name','street_address', 'city', 'county','state','country']]
+
+
+comb_splits_fin_w = comb_splits_fin_w.reset_index()
+
+comb_splits_fin_w = pd.merge(comb_splits_fin_w, place_name_add_df, 
+                             how='left', left_on='place_name', right_on = 'place_name')
+
+comb_splits_fin_w.loc[comb_splits_fin_w['address_number'].isnull(),'address_number'] = comb_splits_fin_w['st_add']
+
+comb_splits_fin_w = comb_splits_fin_w.drop('st_add', axis=1)
+
+
+
+# %% Aggregate by block number
+
+# create new df named 'add_num' to identify if the value in the 'add_num' field is a number or text. 
+# If it is a number, put in column 'add_is_num', if it is text put it in column 'add_is_text'.
+
+comb_splits_fin_w['add_block_num'] = np.floor(comb_splits_fin_w['address_number'].astype(float)/100)
+comb_splits_fin_w['add_block_num'] = comb_splits_fin_w['add_block_num'].astype(str).apply(lambda x: x.replace('.0',''))
+comb_splits_fin_w['add_block_num'] = comb_splits_fin_w['add_block_num'].replace('0','10')
+
+ # %%
+'''
+litter_add_final = pd.concat([litter_add_final, add_num], axis=1)
+litter_add_final['add_blocknum_street'] = litter_add_final['add_block_num'].astype(str) + ' ' + litter_add_final['add_street']
+
+litter_add_final = litter_add_final[['id', 'add_num', 'add_street', 'add_city', 'add_county', 'add_state', 'add_zip', 'add_country', 'add_block_num', 'add_blocknum_street']]
+
+litter = pd.merge(litter, litter_add_final, on = 'id', how = 'left')
+'''
+#%%
+
+litter = pd.merge(litter, comb_splits_fin_w, how = 'left', 
+                       left_on = litter['id'].astype('str'), 
+                       right_on=comb_splits_fin_w['id'].astype('str'))
+
+litter = litter.drop(['id_y', 'key_0'],axis=1)
+litter = litter.rename(columns = {'id_x': 'id'})
+
+litter['add_block_num_st'] = litter['add_block_num'] + ' ' + litter['street_address']
+
+
+# %%
+# create new dataframe, 'df_latlon' to get the minimum latitude and minimum longitude by block
+df_latlon = litter[['add_block_num_st', 'lat', 'lon']]
+df_latlon = df_latlon.groupby('add_block_num_st')[['lat', 'lon']].min().reset_index()
+df_latlon = df_latlon.rename(columns = {'lat': 'min_lat', 'lon': 'min_lon'})
+
+litter = pd.merge(litter, df_latlon, on = 'add_block_num_st', how = 'left')
+
+# %%
+# create pivot table 'st_count' to show the number of times litter was picked up on that block
+st_count = pd.DataFrame(litter.groupby(['add_block_num_st'])['date_taken_date'].nunique()).reset_index()
+st_count = st_count.rename(columns = {'date_taken_date': 'total_count_pickup_dates'})
+# %%
+# create pivot table 'litter_sum' to show the total litter picked up at each block
+litter_sum = pd.DataFrame(litter.groupby(['add_block_num_st'])['litter_count'].sum()).reset_index()
+litter_sum = litter_sum.rename(columns = {'litter_count':'total_litter_pickedup'})
+
+# %%
+# join 'st_count' to 'litter_sum' using left join on 'add_blocknum_street'
+litter_sum = pd.merge(litter_sum, st_count, on = 'add_block_num_st', how = 'left')
+# calculate the average total litter picked up at each block per date
+litter_sum['avg_litter_pickedup'] = round((litter_sum['total_litter_pickedup']) / (litter_sum['total_count_pickup_dates']),1)
+
+
+# join the 'df_latlon' to 'litter_sum' to facilitate litter density on a street map
+litter_sum = pd.merge(litter_sum, df_latlon, on = 'add_block_num_st', how = 'left')
+
+
+#%% create place_name chart
+
+pl_name = litter[['id', 'place_name', 'litter_count']]
+
+pl_name = pl_name.dropna(axis = 0).reset_index()
+
+pl_name = pl_name[['place_name', 'litter_count']]
+
+pl_name = pl_name.groupby(['place_name']).agg(
+     litter_count = pd.NamedAgg(column = 'litter_count', aggfunc='sum')
 )
 
+pl_name = pl_name.sort_values('litter_count', ascending=False).reset_index()
+pl_name_fin = pl_name[['place_name', 'litter_count']]
 
-#%% Density for at least 3 pickups
-df_piv_three = df_piv[df_piv['total_count_pickup_dates'] >= 3].nlargest(10, 'avg_litter_pickedup')
+pl_name_fin['place_name'] = pl_name_fin['place_name'].replace('L&M Mighty Shop', 'Ralston Creek at Burlington & S Van Buren')
+pl_name_fin = pl_name_fin.rename(columns = {'place_name': 'Business Location',
+                                            'litter_count': 'Litter Count'})
 
-
-density_bar_three = px.bar(df_piv_three, x='avg_litter_pickedup', 
-       y= 'add_block_num_st',
-       hover_data={'add_block_num_st': True,
-                   'avg_litter_pickedup': True,
-                   'total_count_pickup_dates': True},
-        labels={'add_block_num_st': 'Street Block',
-                'avg_litter_pickedup': 'Average Litter Picked Up',
-                'total_count_pickup_dates': 'Count of Outings'},
-        color = 'avg_litter_pickedup',
-        color_continuous_scale=[myblue, mygreen])
-
-density_bar_three.update_layout(yaxis_title=None, xaxis_title = 'Average Litter Picked Up', plot_bgcolor = mygrey)
-density_bar_three.update_layout(font=dict(size=15),
-                                    title={
-                                    'text': 'Top 10 Average Litter Picked Up by Street Block',
-                                    'x': 0.5, # Title position (0-1, where 0.5 is the center)
-                                    'xanchor': 'center', # Title alignment ('center', 'left', 'right')
-                                    'font': {'size': 20} # Title font size
-                                },
-                                xaxis = dict(showgrid = False),
-                                yaxis = dict(showgrid = False))
-density_bar_three.update_layout(yaxis=dict(autorange = 'reversed'))
-
-
-#%% Top 10 Litter Density by Street Block
-# Density Map
-density_fig = px.scatter_mapbox(df_piv_three, lat="min_lat", lon="min_lon",    
-                        color='avg_litter_pickedup', 
-                        #size="avg_litter_pickedup",
-                        size = df_piv_three['avg_litter_pickedup'] * 2,
-                        color_continuous_scale=[myblue, mygreen],
-                        #color_continuous_midpoint=10,
-                        zoom=12,
-                        hover_data={'avg_litter_pickedup': True,
-                                    'min_lat': False,
-                                    'min_lon': False,
-                                    'add_block_num_st': True,
-                                    'total_count_pickup_dates': True,
-                                    #'size': False
-                                    },
-                        labels = {'add_block_num_st': 'Street Block',
-                                  'total_count_pickup_dates': 'Count of Outings',
-                                  'avg_litter_pickedup': 'Average Litter Picked Up'}
-                        )
-
-density_fig.update_layout(font=dict(size=15),
-                          title={
-                                    'text': 'Locations of Top 10 Average Litter Picked Up by Street Block',
-                                    'x': 0.5, # Title position (0-1, where 0.5 is the center)
-                                    'xanchor': 'center', # Title alignment ('center', 'left', 'right')
-                                    'font': {'size': 20} # Title font size
-                                })
-density_fig.update_layout(mapbox_accesstoken = mytoken)
-density_fig.update(layout_coloraxis_showscale=False)
-
+#%%
+###################################################### < Step 6: Get Litter Pickup Durations       > ####################################################
+###################################################### < Replace times when litter was picked      > ####################################################
+###################################################### < up at different times through the day     > ####################################################
+###################################################### < group data by date, am_pm                 > ####################################################
+###################################################### < get min time, max time, duration, and litter count   > ####################################################
 
 #%%
 
-#external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__,
-           #transforms=[ServersideOutputTransform()],
-           external_stylesheets=[dbc.themes.COSMO],
-           meta_tags=[{'name': 'viewport',
-                      'content': 'width=device-width, initial-scale=1.0, maximum-scale=1.2, minimum-scale=0.5,'}]
-                )
-
-server = app.server
-app.layout = html.Div([
-    dcc.Tabs([
-        dcc.Tab(label='Home',style = tab_style, selected_style = tab_selected_style,
-                children=[
-                html.Br(),
-                dbc.Row([  
-
-                    dbc.Col([
-                        #html.Br(),
-                        #html.Br(),
-                        #html.Br(),
-                        html.Br(),
-                        html.H3('Upcoming Events',
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'20px',
-                                'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('11/1/2025: Cleanup at [Ralston Creek.](https://www.meetup.com/iowa-city-litter-crew/events/311506720/?eventOrigin=group_events_list)',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
-
-
-                        #html.H4(dcc.Markdown('5/17/2025: Learn How to Use Open Litter Map - [Event Details.](https://www.meetup.com/iowa-city-litter-crew/events/307700150/?eventOrigin=group_upcoming_events)',
-                        #                      link_target="_blank"),
-                        #        style = {'textAlign': 'left',
-                        #        'paddingLeft':'30px'}),
-
-                        html.Br(),
-                        html.Br(),
-                        html.H3('Upcoming Events Hosted by Other Groups',
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'20px',
-                                'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('None known at this time.',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
-
-                        #html.H4(dcc.Markdown('9/27/2025: [Coralville Trash Pick Up](https://www.facebook.com/events/1324939625881503)',
-                        #                      link_target="_blank"),
-                        #        style = {'textAlign': 'left',
-                        #        'paddingLeft':'30px'}),
-                        #html.H4(dcc.Markdown('10/11/2025: [The Iowa River Clean Up](https://www.johnsoncountyiowa.gov/iowa-river-clean)',
-                        #                      link_target="_blank"),
-                        #        style = {'textAlign': 'left',
-                        #        'paddingLeft':'30px'}),
-                        #html.Br(),
-                        #html.Br(),
-                        
-                        
-                        html.Br(),
-                        html.Br(),
-                        html.H3('Past Collaborations',
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'20px',
-                                'font-weight':'bold'}),
-
-                        html.H4(dcc.Markdown('6/8/2025: [Whispering Meadows Cleanup with RSFIC and Iowa City Parks and Rec Support](https://na01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fwww.facebook.com%2Fshare%2Fp%2F1CSRgVjQxe%2F&data=05%7C02%7C%7C461e6e1fcda94b39b5b308ddf54b626c%7C84df9e7fe9f640afb435aaaaaaaaaaaa%7C1%7C0%7C638936426345838119%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&sdata=V7oNQMmUGlXIWPrwfqoHtYyvpNsQJ5uVtjQU%2Bqwj84k%3D&reserved=0)',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
-
-                        html.H4(dcc.Markdown('4/27/2025: South of 6 District Team Up to Clean Up',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
-
-
-                        html.H4(dcc.Markdown('4/19/2025: Coralville Litter Crew Kickoff and Cleanup',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
-                        
-
-                        
-
-
-
-                    ]),      
-                    dbc.Col([
-                        dbc.CardImg(src="/assets/logo.jpg", bottom=True,                             
-                                #style = {'height':'30%',
-                                #'width': '40%',
-                                #}
-                                    ), 
-
-
-                    ]), # row
-
-
-                    dbc.Col([
-                        dbc.CardImg(src="/assets/Melissa and Cara.jpg", bottom=True,                             
-                                style = {'height':'80%',
-                                #'width': '40%',
-                                'paddingLeft': '20px'}
-                                    ), 
-
-                        dbc.CardBody(
-                                html.P(["Cara Keller and Melissa Serenda", html.Br(), "Iowa City Litter Crew Leadership"], className="card-title",
-                                       style={'font-size':'25px',
-                                              'font_family':'helvetica'})
-                            ),
-
-
-                    ]) # row
-                ]), # col
-
-
-                html.Br(),
-                html.Br(),
-
-                    dbc.Row([
-                         html.H2("Connect with ICLC online!!",
-                        style = {'textAlign': 'left',
-                                'paddingLeft':'25px'}),
-                        html.Br(),
-                        html.Br(),
-                        dbc.Col([dbc.Button('Iowa City Litter Crew on Meetup',
-                                                href = 'https://www.meetup.com/iowa-city-litter-crew/',
-                                                external_link=True,
-                                                target='_blank',
-                                                style={'background-color':myblue,
-                                                        'color': 'white',
-                                                        'font-size':'25px',
-                                                        'font-face':'bold'}),
-                        ], className="d-grid gap-2 col-3 mx-auto"),
-
-                        dbc.Col([dbc.Button('Iowa City Litter Crew on Facebook',
-                                                href = 'https://www.facebook.com/groups/iowacitylittercrew/',
-                                                external_link=True,
-                                                target='_blank',
-                                                style={'background-color':myblue,
-                                                        'color': 'white',
-                                                        'font-size':'25px',
-                                                        'font-face':'bold'}) 
-                    ], className="d-grid gap-2 col-3 mx-auto"),
-
-                        dbc.Col([dbc.Button('Iowa City Litter Crew on Bluesky',
-                                                    href = 'https://bsky.app/profile/iowacitylittercrew.bsky.social',
-                                                    external_link=True,
-                                                    target='_blank',
-                                                    style={'background-color':myblue,
-                                                            'color': 'white',
-                                                            'font-size':'25px',
-                                                            'font-face':'bold'}) 
-                        ], className="d-grid gap-2 col-3 mx-auto"),    
-
-
-                        dbc.Col([dbc.Button('Email the Iowa City Litter Crew',
-                                                    href = 'mailto:iowacitylittercrew@gmail.com',
-                                                    external_link=True,
-                                                    target='_blank',
-                                                    style={'background-color':myblue,
-                                                            'color': 'white',
-                                                            'font-size':'25px',
-                                                            'font-face':'bold'}) 
-                        ], className="d-grid gap-2 col-3 mx-auto"),          
-                    
-                    ]),
-
-
-                    html.Br(),
-                    html.Br(),
-
-                    dbc.Row([
-
-                        html.H2("Get started with Open Litter Map and Litter Bingo!!",
-                        style = {'textAlign': 'left',
-                                'paddingLeft':'25px'}),
-                        html.Br(),
-                        html.Br(),
-                        dbc.Col([dbc.Button('Open Litter Map',
-                                                href = 'https://openlittermap.com/',
-                                                external_link=True,
-                                                target='_blank',
-                                                style={'background-color':myblue,
-                                                        'color': 'white',
-                                                        'font-size':'25px',
-                                                        'font-face':'bold'}),
-                        ],className="d-grid gap-2 col-3 mx-auto"),
-
-                        dbc.Col([dbc.Button('Open Litter Map Quick Start Guide',
-                                                href = 'https://drive.google.com/file/d/10nVfxFRvPqmi5Kvg9IVpNe6AOnfu_4Kb/view?usp=drive_link',
-                                                external_link=True,
-                                                target='_blank',
-                                                style={'background-color':myblue,
-                                                        'color': 'white',
-                                                        'font-size':'25px',
-                                                        'font-face':'bold'}) 
-                    ],className="d-grid gap-2 col-3 mx-auto"),
-
-                    dbc.Col([dbc.Button('Printer Friendly Litter Bingo',
-                                                href = '/assets/Litter_Bingo_text-only.pdf',
-                                                external_link=True,
-                                                target='_blank',
-                                                style={'background-color':myblue,
-                                                        'color': 'white',
-                                                        'font-size':'25px',
-                                                        'font-face':'bold'}) 
-                    ],className="d-grid gap-2 col-3 mx-auto"),  
-
-                    html.H3(' '),
-                    html.H3(' '),
-                    html.H3(' '),
-
-                    dbc.Row([
-                         html.H4("Last Refresh Date: " + today,
-                        style = {"position": "fixed",
-                                    "bottom": "0",
-                                    "left": "0",
-                                    "padding": "10px",
-                                    "background-color": "lightblue",
-                                    "border": "1px solid black"})
-                                
-                    ]),              
-         
-                    
-                    ], justify = 'center')                 
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    ] #children
-                
-            ),  # tab
-              #tabs
-        dcc.Tab(label='Celebrate Litter Crew Wins', style = tab_style, selected_style = tab_selected_style,
-                children=[
-                
-                html.Br(),
-
-                html.H1('Litter Picked Up at Iowa City Litter Crew Clean Up Events',
-                    style = {'textAlign': 'center'}),
-            
-                dbc.Col([
-                dbc.Card([
-                    dbc.CardBody(
-                        [
-                            dbc.Row([
-                                dbc.Col([
-                                    html.H4('Total Bags of Litter Collected', 
-                                            className='card-title',
-                                            style={'textAlign': 'center',
-                                                'fontSize': 40})
-                                ]),                              
-                                dbc.Col([
-                                    html.P(bag_count, 
-                                        className= 'card-text',
-                                        style={'textAlign': 'center',
-                                                'fontSize': 40},
-                                        )
-                                ]), 
-                            ])
-                            
-                        ]
-                    )
-                ],color = myblue, inverse = True)
-            ]), # col 300
-
-                html.Br(),
-
-                dbc.Row([
-                        dbc.Col([
-                            dcc.Graph(figure=fig_bar_yr,
-                            style = {'width': '50vw', 'height': '50vh'},
-                            config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                                "autoScale2d" "select2d", "lasso2d"]})
-                        ], xs=8, sm=8, md=12, lg=6, xl=5),
-
-                        dbc.Col([
-                            dcc.Graph(figure=event_density_fig,
-                            style = {'width': '50vw', 'height': '50vh'},
-                            config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                                "autoScale2d" "select2d", "lasso2d"]})
-                        ], xs=8, sm=8, md=12, lg=6, xl=5),
-                        ]), # row 327
-
-            html.Br(),
-            html.Br(),
-            html.H3("Spring 2025 Cleanups",
-                    style = {'textAlign': 'center'}),
-                
-                html.Br(),
-                html.Br(),
-                dbc.Row([
-                    dbc.Col([
-                    #html.H3("Spring 2025 Cleanups"),
-                    html.H4("Whispering Meadows Wetland & Coralville Litter Crew Kickoff"),
-                    dbc.Carousel(
-                        items=[
-                            {
-                                "key": "1",
-                                "src": "/assets/test.jpg",
-                                #"img_style":{"width":"500px","height":"300px"},
-                                "font_face":"bold",
-                                #"header": "March 16th 2025",
-                                'img_style':{'max-height':'750px'},
-                                "caption": "1st Pickup at Whispering Meadows Wetlands 3/16/2025",
-                            },
-                            {
-                                "key": "2",
-                                "src": "/assets/Melissa and Cara.jpg",
-                                'img_style':{'max-height':'750px'},
-                                "header": "Cara and Melissa, Leaders of Iowa City Litter Crew",
-                                "caption": " Week 2 at Whispering Meadows Wetlands 3/23/2025",
-                            },
-                            {
-                                "key": "3",
-                                "src": "/assets/2025-04-19_CoralvilleLitterCrewKickoff.jpg",
-                                'img_style':{'max-height':'750px'},
-                                #"header": "March ",
-                                "caption": "Coralville Litter Crew Kickoff Cleanup 4/19/2025",
-                                "hover": "Coralville Litter Crew Kickoff Cleanup 4/19/2025",
-                            },
-
-                              {
-                                "key": "4",
-                                "src": "/assets/South of 6 Cleanup.jpg",
-                                'img_style':{'max-height':'750px'},
-                                #"header": "March ",
-                                "caption": "Cleanup at Pepperwood Plaza 3/9/2025",
-                                "hover": "Cleanup at Pepperwood Plaza 3/9/2025",
-                            },
-
-                        ], controls=True, 
-                        indicators=True 
-                        #interval=3000,
-                        #ride='carousel'
-                        #, variant = 'dark'
-                    ),  # carousel 351
-
-                    
-                    ], width=6), # col 348
-
-
-                    dbc.Col([
-                            #html.Br(),
-                            html.H4("Coralville Litter Crew Kickoff Cleanup - April 2025"),
-                            BeforeAfter(
-                            before=dict(src="/assets/2025-04-19_b4.jpg"),
-                            after=dict(src="/assets/2025-04-19_after.jpg"),
-                            #width="256",
-                            height="750",
-                            hover='March 2025: Whispering Meadows Wetland'
-                        )
-                    ], width = 6),
-                ]), # row 347
-            html.Br(),
-            html.Br(),
-            html.Br(),
-            html.Br(),
-
-                html.H3('Before and After Photos - Whispering Meadows Wetland, March 2025',
-                style = {'textAlign': 'center'}),
-
-            html.Br(),
-            html.Br(),
-            html.Br(),
-
-
-                dbc.Row([
-                    dbc.Col([
-                            #html.H4("Whispering Meadows Wetland - March 2025"),
-                            BeforeAfter(
-                            before=dict(src="/assets/A_Before_WMW.jpg"),
-                            after=dict(src="/assets/A_After_WMW.jpg"),
-                            #width="256",
-                            height="500",
-                            hover='March 2025: Whispering Meadows Wetland'
-                        )
-                    ], width = 4),
-
-                        dbc.Col([
-                        #html.H4("Whispering Meadows Wetland - March 2025"),
-                            BeforeAfter(
-                            before=dict(src="/assets/B_Before_WMW.jpg"),
-                            after=dict(src="/assets/B_After_WMW.jpg"),
-                            #width="256",
-                            height="500",
-                            hover='March 2025: Whispering Meadows Wetland'
-                        )
-                    ], width = 4),
-
-                dbc.Col([
-                        #html.H4("Whispering Meadows Wetland - March 2025"),
-                        BeforeAfter(
-                        before=dict(src="/assets/C_Before_WMW.jpg"),
-                        after=dict(src="/assets/C_After_WMW.jpg"),
-                        #width="256",
-                        height="500",
-                        hover='March 2025: Whispering Meadows Wetland'
-                    )
-                ], width = 4),  # row 401
-
-                 ]),
-        
-            html.Br(),
-            html.Br(),
-     
-    ]), # tab closure 294
-
-
-
-        dcc.Tab(label='Explore Litter Data', style = tab_style, selected_style = tab_selected_style,
-                children=[
-            html.Br(),
-            html.H1('Litter AND Litter Data Collected by Individual Contributors',
-                    style = {'textAlign': 'center'}),
-        
-            html.Br(),
-            html.Br(),
-
-
-                
-            dbc.Row([
-
-
-            dbc.Col([
-                dbc.Card([
-                    dbc.CardBody(
-                        [
-                            dbc.Row([
-                                dbc.Col([
-                                    html.H4('Total Litter Collected', className='card-title',
-                                            style={'textAlign': 'center',
-                                                'fontSize': 40})                         
-                                ]),
-                                dbc.Col([
-                                    html.P(total_litter, 
-                                        className= 'card-text',
-                                        style={'textAlign': 'center',
-                                                'fontSize': 40},
-                                        )
-                                ]), 
-                            ]) 
-                            
-                        ]) 
-                    
-            ],color = myblue, inverse = True)
-            ]),
-                ]),  #row 461
-
-                dbc.Row([    
-
-                    dbc.Col([
-                        dbc.Card([
-                            dbc.CardBody(
-                                [
-                                    dbc.Row([
-                                        dbc.Col([
-                                            html.H4('Soft Drinks', className='card-title'),
-                                            DashIconify(icon="mdi:bottle-soda-classic-outline",
-                                                width=30)
-                                        ]),
-                                        dbc.Col([
-                                            html.P(total_softdrinks, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                        ]),
-                                    ])
-                                    
-                                ])
-                            
-                        ],color = mycardgrey, inverse = False)
-                    ]),  # col 491
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Food', className='card-title'),
-                                        DashIconify(icon="pajamas:food",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_food, 
-                                            className= 'card-text',
-                                            style={'textAlign': 'right',
-                                                    'fontSize': 30},
-                                            )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]),  # col 515
-
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Other', className='card-title'),
-                                        DashIconify(icon="flowbite:teddy-bear-outline",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_other, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]), # col 540
-
-
-                dbc.Col([
-                dbc.Card([
-                    dbc.CardBody(
-                        [
-                            dbc.Row([
-                                dbc.Col([
-                                    html.H4('Plastic Bags', className='card-title'),
-                                    DashIconify(icon="material-symbols:shopping-bag-outline",
-                                        width=30)
-                                ]),
-                                dbc.Col([
-                                    html.P(total_plastic_bags, 
-                                            className= 'card-text',
-                                            style={'textAlign': 'right',
-                                                    'fontSize': 30},
-                                            )
-                                ]),
-                            ])
-                            
-                        ]
-                    )
-                ],color = mycardgrey, inverse = False)
-            ]), # col 565
-
-
-            ]), # row 489
-
-            html.Br(),
-
-            dbc.Row([
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Smoking', className='card-title'),
-                                        DashIconify(icon="mdi:smoking",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_smoking, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]), # col 596
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Alcohol', className='card-title'),
-                                        DashIconify(icon="streamline:champagne-party-alcohol",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_alcohol, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]), # col 620
-
-                
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Coffee', className='card-title'),
-                                        DashIconify(icon="ep:coffee",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_coffee, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]), # col 645
-
-
-
-
-            
-
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody(
-                            [
-                                dbc.Row([
-                                    dbc.Col([
-                                        html.H4('Sanitary and Custom', className='card-title'),
-                                        DashIconify(icon="f7:facemask",
-                                            width=30),
-                                            #DashIconify(icon="mdi:industrial",
-                                            #width=30),
-                                            DashIconify(icon="fluent:phone-48-regular",
-                                            width=30)
-                                    ]),
-                                    dbc.Col([
-                                        html.P(total_small_constributors, 
-                                                className= 'card-text',
-                                                style={'textAlign': 'right',
-                                                        'fontSize': 30},
-                                                )
-                                    ]),
-                                ])
-                                
-                            ]
-                        )
-                    ],color = mycardgrey, inverse = False)
-                ]), # col 674
-                
-            ]), # row 594
-
-
-
-        html.Br(),
-        html.Br(),
-        html.H1('Top 10 Litter Density by Street Block',
-                style = {'textAlign': 'center'}),
-
-        dbc.Row([
-            dbc.Col([
-            dcc.Graph(figure=density_fig,
-              style = {'width': '50vw', 'height': '50vh'},
-              config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                   "autoScale2d" "select2d", "lasso2d"]})
-        ], xs=8, sm=8, md=12, lg=6, xl=5),
-
-            dbc.Col([
-                dcc.Graph(figure=density_bar_three,
-                style = {'width': '50vw', 'height': '50vh'},
-                config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                    "autoScale2d" "select2d", "lasso2d"]})
-            ], xs=8, sm=8, md=12, lg=6, xl=5),
-        ]),
-        
-
-        html.Br(),
-        html.Br(),         
-        html.Br(),
-
-        html.H1('Litter Location, Composition and Timeline Based on Your Selections',
-                style = {'textAlign': 'center'}), 
-        html.Br(),
-
-        html.H5('Add or remove item(s) from the drop down.'),
-        dcc.Dropdown(
-            id = 'litter_type_dd',
-            placeholder = 'Select a litter type...',
-            multi=True,
-            value = ['Alcohol','Coffee', 'Custom_Litter_Type','Food', 'Industrial',
-                    'Other', 'Pet_Waste','Plastic Bags' ,'Sanitary', 'Smoking', 'Softdrinks'],
-            clearable = True,
-            searchable = True,
-            options = [{'label': main_category,
-                    'value': main_category}
-                    for main_category in sorted(df['main_category'].unique())], style={'width': '80%',
-                                                                                        'height': '100%',
-                                                                                        'font-size': 25}),
-
-        html.Br(),
-        
-        html.Br(),
-
-        html.H5('Select the date range.'),    
-
-        dcc.DatePickerRange(
-            id = 'date_range',
-            min_date_allowed = df['date_taken_date'].min(),
-            max_date_allowed = df['date_taken_date'].max(),
-            initial_visible_month = dt.date(2023,8,1),
-            start_date = df['date_taken_date'].min(),
-            end_date = df['date_taken_date'].max()
-            
-        ), 
-
-        html.Br(),
-        html.Br(),
-
-        dbc.Row([
-
-            dbc.Col([
-                html.H4('Litter Quantity',
-                        style = {'textAlign': 'center',
-                                'paddingRight':'125px'}),
-
-                dash_table.DataTable(
-                    
-                    id = 'mytable',
-                    fill_width=False,
-                    style_cell={'fontSize': 20,
-                                'font_family':'helvetica',
-                                'text_align': 'right',
-                                'padding': '5px'},
-                    style_cell_conditional=[
-                                    {
-                                        'if': {'column_id': c},
-                                        'textAlign': 'left'
-                                    } for c in ['Main Category']
-                                ],
-                    style_as_list_view = True,
-                    style_header={'fontWeight': 'bold',
-                                      'backgroundColor': mycardgrey,
-                                      'color': myblue},
-                    style_table={'paddingLeft':'50px',
-                                    'paddingTop': '10px',
-                                    'overflowY': 'auto'})
-                    
-        ,
-                    ]), # col 766
-        
-
-            dbc.Col([
-                html.H4('Litter Composition',
-                        style = {'textAlign':'center'}),
-
-
-                dcc.Graph(id = 'sunburst_chart',
-                            style = {'height': '40vh',
-                                        'width' : '30vw',
-                                        'paddingLeft':'0px',
-                                        'paddingTop':'0px'})
-            
-            ]) , # col 786
-
-
-
-        ]),   # row 764
-
-        dbc.Col([
-
-                html.H4('Litter Location',
-                        style = {'textAlign':'center'}),
-
-                dcc.Graph(id = 'litter_density_map',
-                        style = {'height': '100vh'},
-                        #         'width': '50vw'},
-                config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                    "autoScale2d" "select2d", "lasso2d"]})
-
-            ]), # col 803
-
-        html.H4('Litter Timeline',
-                        style = {'textAlign':'center'}),
-        
-        dcc.Graph(id = 'bar_chart',
-                style = {'height': '35vh'},
-                config = {'modeBarButtonsToRemove': ['select','zoom', "pan2d", "autoScale",
-                                                    "autoScale2d" "select2d", "lasso2d"]}),
-
-
-
-                ]), # tab closure 451
-
-
-        dcc.Tab(label='Brands & Businesses', style = tab_style, selected_style = tab_selected_style,
-                children=[
-        
-        html.Br(),
-        html.H3('Brands of Litter Picked Up & Business Locations with Litter Picked Up',
-        style = {'textAlign':'center'}),
-
-        html.Br(),
-        html.Br(),
-
-        dbc.Row([
-                dbc.Col([
-                #html.H2("Litter by Brands",
-                #        style = {'padding': '5px'}),
-                dash_table.DataTable(brands.to_dict('records'), 
-                                    [{"name": i, "id": i} for i in brands.columns],
-                                   # page_current=0,
-                                    page_size=20,
-                                    fill_width=False,
-                        style_cell={'fontSize': 20,
-                                    'font_family':'helvetica',
-                                    'text_align': 'right',
-                                    'padding': '5px'},
-                        style_cell_conditional=[
-                                    {
-                                        'if': {'column_id': c},
-                                        'textAlign': 'left'
-                                    } for c in ['Brand Name']
-                                ],
-                        style_as_list_view = True,
-                        style_header={'fontWeight': 'bold',
-                                      'backgroundColor': mycardgrey,
-                                      'color': myblue},
-                        style_table={'paddingLeft':'50px',
-                                    'paddingTop': '10px',
-                                    'overflowY': 'auto'}
-                        )
-                ], width = 4),
-
-
-                dbc.Col([
-                        dbc.CardImg(src="/assets/Fireball.jpg", bottom=True,                             
-                                style = {'height':'70%',
-                                'width': '68%',
-                                'paddingLeft': '20px'}
-                                    ), 
-                ]),
-
-                    dbc.Col([
-                #html.H2("Business Locations with Litter"),
-                dash_table.DataTable(places.to_dict('records'), 
-                                    [{"name": i, "id": i} for i in places.columns],
-                                   # page_current=0,
-                                    page_size=20,
-                                    #theme = 'Miller',
-                                    fill_width=False,
-                        style_cell={'fontSize': 20,
-                                    'font_family': 'helvetica',
-                                    'text_align': 'right',
-                                    'padding': '5px'},
-                        style_cell_conditional=[
-                                    {
-                                        'if': {'column_id': c},
-                                        'textAlign': 'left'
-                                    } for c in ['Business Location']
-                                ],
-                        style_as_list_view = True,
-                        style_header={'fontWeight': 'bold',
-                                      'backgroundColor': mycardgrey},
-                        style_table={'paddingLeft':'50px',
-                                    'paddingTop': '10px',
-                                    'overflowY': 'auto'})
-                ], width = 4)
-            ]), # row 833
-
-                ]), # tab closure 831
-        
-        #dcc.Tab(label='How to Get Started', style = tab_style, selected_style = tab_selected_style,
-        #        children=[
-        #            dbc.Col([        
-        #            dbc.Row([
-        #                dbc.CardImg(src="/assets/litter_bingo.jpg", bottom=True,                             
-        #                        style = {'height':'50%',
-        #                        'width': '50%',
-        #                        }
-        #                            ), 
-
-
-        #            ], justify = 'center') # row
-        #        ]), # col
-        #       ]) # tab closure 1138
-
-            ], id='mytabs'), # tabs closure 230
-
-
-        ]) # html div closure 229
-
-
-
-
-#%% Map Chart
-@app.callback(Output('litter_density_map','figure'),
-              Input('litter_type_dd','value'),
-              Input('date_range', 'start_date'),
-              Input('date_range', 'end_date'))
-              #Input('top_10_filter', 'value'))
-
-
-def density_map(mycategory, start_date, end_date):
-
-    if not start_date or not end_date or not mycategory:
-        raise PreventUpdate   
-    
-    temp_df = df.loc[df['main_category'].isin(mycategory)]
-
-
-    temp_df = temp_df.loc[temp_df['date_taken_date'].between(pd.to_datetime(start_date), 
-                                                                 pd.to_datetime(end_date),
-                                                                 inclusive='both')]
-    
-  
-    fig = px.scatter_mapbox(temp_df, lat="lat", lon="lon",    
-                            color="main_category", 
-                            #size="litter_count",
-                            size = temp_df['litter_count'],
-                            zoom=13,
-                            color_discrete_map=color_discrete_map,
-                            hover_data={'litter_count': True,
-                                    'lat': False,
-                                    'lon': False,
-                                    'main_category': True,
-                                    #'size': False
-                                    },
-                            labels = {'litter_count': 'Litter Count',
-                                      'main_category': 'Litter Type'})
-    
-    fig.update_layout(legend=dict(bgcolor = mygrey,
-                                  bordercolor = 'Black',
-                                  orientation = 'v',
-                                  yanchor='top',
-                                  x=0.01)),
-    
-    fig.update_layout(legend_title = 'Litter Type',
-                      font=dict(size = 15),
-                      mapbox = dict(zoom = 13))
-    
-    fig.update_layout(mapbox_accesstoken = mytoken)
-    return fig
-
-#%% Sunburst Chart
-
-@app.callback(Output('sunburst_chart','figure'),
-              Input('litter_type_dd','value'),
-              Input('date_range', 'start_date'),
-              Input('date_range', 'end_date'))
-              #Input('top_10_filter', 'value'))
-
-def sunburst_chart(mycategory, start_date, end_date):
-
-    if not start_date or not end_date or not mycategory:
-        raise PreventUpdate
-    
-        
-   
-    temp_df = df.loc[df['main_category'].isin(mycategory)]
-
-
-    temp_df = temp_df.loc[temp_df['date_taken_date'].between(pd.to_datetime(start_date), 
-                                                                 pd.to_datetime(end_date),
-                                                                 inclusive='both')]
-    
-    # if my_add_blocknum:
-    #     temp_df = temp_df.loc[temp_df['add_blocknum_street'].eq(my_add_blocknum)]
-    
-    temp_piv = pd.DataFrame(temp_df.groupby(['main_category', 'sub_category'])['litter_count'].sum().reset_index())
-
-
-
-    fig = px.sunburst(temp_piv, 
-                  path = ['main_category', 'sub_category'], 
-                  values='litter_count', 
-                  hover_name='main_category', 
-                  color = 'main_category',
-                  color_discrete_map=color_discrete_map)
-             
-    
-    
-    fig.update_traces(textinfo="label+percent parent")
-    #fig.update_traces(hovertemplate = "Main Category: %{parent}: <br>Sub Category: %{label} </br>Count:%{value} </br>Percentage:%{percentParent:.02f}")
-    fig.update_traces(hovertemplate = "Main Category: %{parent}: <br>Sub Category: %{label} </br>Count:%{value}")
-    fig.update_layout(margin = dict(t=0, l=0, r=0, b=0))
-    #fig.layout.coloraxis.colorbar['thickness'] = 200
-    fig.update_layout(font=dict(size=15))
-    #fig.layout.paper_bgcolor = 'lightgrey'
-    return fig
-
-#%%
-
-
-#%% Summary Table
-
-@app.callback(Output('mytable','data'),
-              Input('litter_type_dd','value'),
-              Input('date_range', 'start_date'),
-              Input('date_range', 'end_date'))
-              #Input('top_10_filter', 'value'))
-
-
-
-def get_my_table(mycategory, start_date, end_date):
-
-    if not start_date or not end_date or not mycategory:
-        raise PreventUpdate   
-    
-    mytable = df.loc[df['main_category'].isin(mycategory)]
-
-
-    mytable = mytable.loc[mytable['date_taken_date'].between(pd.to_datetime(start_date), 
-                                                                 pd.to_datetime(end_date),
-                                                                 inclusive='both')]
-    
-    # if top_10_filter:
-    #     mytable = mytable.loc[mytable['add_blocknum_street'].eq(top_10_filter)]
-    
-    mytable = pd.DataFrame(mytable.groupby(['main_category'])['litter_count'].sum().reset_index())
-    mytable = mytable.sort_values(by = 'litter_count', ascending=False)
-
-    mytable = (pd.DataFrame([*mytable.values, ['Total', *mytable.sum(numeric_only=True).values]], 
-              columns=mytable.columns))
-    
-    mytable = mytable.rename(columns={'main_category': 'Main Category',
-                                      'litter_count': 'Litter Count'})
-    
-    
-
-    return mytable.to_dict('records')
-
-
-
-
-#%% bar chart
-
-@app.callback(Output('bar_chart','figure'),
-              Input('litter_type_dd','value'),
-              Input('date_range', 'start_date'),
-              Input('date_range', 'end_date'))
-
-
-def my_bar_chart(mycategory, start_date, end_date):
-
-    if not start_date or not end_date or not mycategory:
-        raise PreventUpdate
-
-    temp_df = df.loc[df['main_category'].isin(mycategory)]
-
-
-    temp_df = temp_df.loc[temp_df['date_taken_date'].between(pd.to_datetime(start_date), 
-                                                                 pd.to_datetime(end_date),
-                                                                 inclusive='both')]
-    
-    temp_df = pd.DataFrame(temp_df.groupby(['date_taken_date', 'main_category'])['litter_count'].sum().reset_index())
-
-    fig = px.line(temp_df,
-             x='date_taken_date',
-             y = 'litter_count',
-             markers=True,
-            hover_data={'date_taken_date': True,
-                        'main_category' : True,
-                         'litter_count': True},
-            labels = {
-                'date_taken_date': 'Date Litter Picked Up',
-                'litter_count': 'Litter Count',
-                'main_category': 'Litter Type',
-            },
-            color = 'main_category',
-            color_discrete_map=color_discrete_map)
-    
-    fig.update_layout(showlegend = False)
-    fig.update_layout(plot_bgcolor = mygrey)
-    fig.update_layout(font=dict(size=15),
-                       xaxis = dict(showgrid = False),
-                       yaxis = dict(showgrid = False))
-    return fig
-
-
-
-
-
-
-if __name__ == '__main__':
-    app.run(debug=False)
-    #app.run()
-    #app.run_server(
-    #    ssl_context = 'adhoc'
-    #)
+# replace values
+# litter can be picked up several times throughout the day.
+# I am going to replace time stamps so that duration is not impacted by this scenario
+
+
+def update_time(myid, mydate):
+    myindex = durations.index[durations['id'] == myid].tolist()
+    durations.loc[myindex, 'date_taken'] = mydate
+
+durations = litter[['id', 'phone', 'date_taken_date', 'date_taken', 'litter_count']]
+# June 23, 2024
+
+update_time(myid = 505104, mydate = '2024-06-23 15:02:00')
+update_time(myid = 505105, mydate = '2024-06-23 15:04:00')
+update_time(myid = 505158, mydate = '2024-06-23 15:07:00')
+update_time(myid = 505159, mydate = '2024-06-23 15:09:00')
+update_time(myid = 505165, mydate = '2024-06-23 15:10:00')
+
+# November 25, 2023
+update_time(myid = 491521, mydate = '2023-11-25 22:10:00')
+
+# September 2, 2023
+update_time(myid = 456907, mydate = '2023-09-02 19:15:00')
+update_time(myid = 456908, mydate = '2023-09-02 19:16:00')
+update_time(myid = 456909, mydate = '2023-09-02 19:17:00')
+update_time(myid = 456910, mydate = '2023-09-02 19:18:00')
+
+# September 16, 2023
+update_time(myid = 463253, mydate = '2023-09-16 21:06:00')
+update_time(myid = 463254, mydate = '2023-09-16 21:07:00')
+update_time(myid = 463255, mydate = '2023-09-16 21:08:00')
+
+# September 20, 2023
+update_time(myid = 470493, mydate = '2023-09-20 13:50:00')
+update_time(myid = 470289, mydate = '2023-09-20 13:52:00')
+
+# September 23, 2023
+update_time(myid = 471118, mydate = '2023-09-23 18:50:00')
+
+# September 30, 2023
+update_time(myid = 472973, mydate = '2023-09-30 21:22:00')
+
+# October 19, 2023
+update_time(myid = 483208, mydate = '2023-10-19 03:30:00')
+update_time(myid = 483409, mydate = '2023-10-19 03:32:00')
+update_time(myid = 483410, mydate = '2023-10-19 03:34:00')
+update_time(myid = 483411, mydate = '2023-10-19 03:36:00')
+update_time(myid = 483412, mydate = '2023-10-19 03:38:00')
+
+# November 4, 2023
+update_time(myid = 486039, mydate = '2023-11-04 18:15:00')
+update_time(myid = 486040, mydate = '2023-11-04 18:17:00')
+
+# November 10, 2023
+update_time(myid = 486630, mydate = '2023-11-10 23:30:00')
+
+# November 12, 2023
+update_time(myid = 488682, mydate = '2023-11-12 16:42:00')
+update_time(myid = 488683, mydate = '2023-11-12 16:44:00')
+
+# November 18, 2023
+update_time(myid = 489878, mydate = '2023-11-18 22:08:00')
+update_time(myid = 489879, mydate = '2023-11-18 22:10:00')
+update_time(myid = 489880, mydate = '2023-11-18 22:12:00')
+update_time(myid = 489881, mydate = '2023-11-18 22:14:00')
+
+# February 11, 2024
+update_time(myid = 496952, mydate = '2024-02-11 20:40:00')
+
+# August 14th, 2024
+update_time(myid = 512591, mydate = '2024-08-14 13:56:00')
+update_time(myid = 512592, mydate = '2024-08-14 13:58:00')
+
+# August 20th, 2024
+update_time(myid = 513314, mydate = '2024-08-20 20:40:00')
+
+# March 27th, 2025
+update_time(myid = 521878, mydate = '2025-03-27 22:40:00')
+update_time(myid = 521879, mydate = '2025-03-27 22:42:00')
+
+
+#%% split out litter pickups throughout the day by am/pm
+# the time stamp is on gmt time, so when I walk Lulu is PM (AM CST) and when I walk Kipper is AM (PM CST).
+# This does a good job of splitting out the 2 litter pickup events.
+# But when it does not the time stamp is hard coded with previous code section.
+# This prevents 2 litter events taking 1 hour to pick up do not show as 8 hours duration.
+
+conditions = [
+    (durations['date_taken'].dt.hour >= 12),
+    (durations['date_taken'].dt.hour < 12)
+]
+
+results = ['pm', 'am']
+
+durations['am_pm'] = np.select(conditions, results, default=pd.NaT)
+
+durations['pick_up_event'] = durations['date_taken_date'].astype(str) + '_' + durations['am_pm']
+
+
+#%% Aggregation
+# get the earliest time stamp, the latest time stamp, and the sum of the litter count for each litter pick up event.
+
+                                                
+durations_piv = durations.groupby(['pick_up_event', 'phone']).agg(
+    min_date=pd.NamedAgg(column="date_taken", aggfunc="min"),
+    max_date=pd.NamedAgg(column="date_taken", aggfunc="max"),
+    sum_litter=pd.NamedAgg(column="litter_count", aggfunc="sum")
+)
+
+#%% get durations
+
+fmt = '%Y-%m-%d %H:%M:%S'
+durations_piv['max_date_fmt'] = (durations_piv['max_date']
+                                 .dt.strftime(fmt))
+
+durations_piv['min_date_fmt'] = (durations_piv['min_date']
+                                 .dt.strftime(fmt))
+
+durations_piv['date_diff'] = durations_piv['max_date'] - durations_piv['min_date']
+
+durations_piv['duration_mins'] = (durations_piv['date_diff'].dt.seconds)/60
+
+durations_piv['litter_per_min']= durations_piv['sum_litter']/(durations_piv['duration_mins']+1)
+
+avg_duration = round(durations_piv['duration_mins'].mean(),0).astype(int)
+
+avg_litter_per_min = round(durations_piv['litter_per_min'].mean(),0).astype(int)
+
+
+#%% Bus Stops
+
+
+
+
+
+
