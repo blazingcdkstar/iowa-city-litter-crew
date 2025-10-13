@@ -512,13 +512,14 @@ app.layout = html.Div([
                     html.H3(' '),
 
                     dbc.Row([
-                         html.H4("Last Refresh Date: " + today,
+                         html.H6("Last Refresh Date: " + today,
                         style = {"position": "fixed",
                                     "bottom": "0",
                                     "left": "0",
                                     "padding": "10px",
-                                    "background-color": "lightblue",
-                                    "border": "1px solid black"})
+                                    #"background-color": "lightblue",
+                                    #"border": "1px solid black"
+                                    })
                                 
                     ]),              
          
