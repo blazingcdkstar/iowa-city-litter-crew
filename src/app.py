@@ -27,6 +27,9 @@ brands = ad.litter_ct_brands_piv
 places = ad.pl_name_fin
 events = ad.litter_event
 
+# today
+today = dt.datetime.today().strftime("%Y-%m-%d")
+
 
 myblue = '#072B51'
 
@@ -319,7 +322,7 @@ app.layout = html.Div([
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'20px',
                                 'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('10/5/2025: Cleanup at [Terry Trueblood.](https://www.meetup.com/iowa-city-litter-crew/events/310860787/?eventOrigin=rsvp_confirmation_suggested_events)',
+                        html.H4(dcc.Markdown('11/1/2025: Cleanup at [Ralston Creek.](https://www.meetup.com/iowa-city-litter-crew/events/311506720/?eventOrigin=group_events_list)',
                                               link_target="_blank"),
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'30px'}),
@@ -336,14 +339,19 @@ app.layout = html.Div([
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'20px',
                                 'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('9/27/2025: [Coralville Trash Pick Up](https://www.facebook.com/events/1324939625881503)',
+                        html.H4(dcc.Markdown('None known at this time.',
                                               link_target="_blank"),
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'30px'}),
-                        html.H4(dcc.Markdown('10/11/2025: [The Iowa River Clean Up](https://www.johnsoncountyiowa.gov/iowa-river-clean)',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
+
+                        #html.H4(dcc.Markdown('9/27/2025: [Coralville Trash Pick Up](https://www.facebook.com/events/1324939625881503)',
+                        #                      link_target="_blank"),
+                        #        style = {'textAlign': 'left',
+                        #        'paddingLeft':'30px'}),
+                        #html.H4(dcc.Markdown('10/11/2025: [The Iowa River Clean Up](https://www.johnsoncountyiowa.gov/iowa-river-clean)',
+                        #                      link_target="_blank"),
+                        #        style = {'textAlign': 'left',
+                        #        'paddingLeft':'30px'}),
                         #html.Br(),
                         #html.Br(),
                         
@@ -497,13 +505,25 @@ app.layout = html.Div([
                                                         'color': 'white',
                                                         'font-size':'25px',
                                                         'font-face':'bold'}) 
-                    ],className="d-grid gap-2 col-3 mx-auto"),
+                    ],className="d-grid gap-2 col-3 mx-auto"),  
 
-                    
+                    html.H3(' '),
+                    html.H3(' '),
+                    html.H3(' '),
+
+                    dbc.Row([
+                         html.H4("Last Refresh Date: " + today,
+                        style = {"position": "fixed",
+                                    "bottom": "0",
+                                    "left": "0",
+                                    "padding": "10px",
+                                    "background-color": "lightblue",
+                                    "border": "1px solid black"})
+                                
+                    ]),              
          
                     
-                    ], justify = 'center')
-                    
+                    ], justify = 'center')                 
                     
                     
                     
