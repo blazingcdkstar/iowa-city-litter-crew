@@ -317,12 +317,12 @@ app.layout = html.Div([
                         #html.Br(),
                         #html.Br(),
                         #html.Br(),
-                        html.Br(),
+                        #html.Br(),
                         html.H3('Upcoming Events',
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'20px',
                                 'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('11/1/2025: Cleanup at [Ralston Creek.](https://www.meetup.com/iowa-city-litter-crew/events/311506720/?eventOrigin=group_events_list)',
+                        html.H4(dcc.Markdown('12/6/2025: [Tour at the new Can-Shed](https://www.meetup.com/iowa-city-litter-crew/events/311876690/?eventOrigin=group_calendar)',
                                               link_target="_blank"),
                                 style = {'textAlign': 'left',
                                 'paddingLeft':'30px'}),
@@ -333,16 +333,16 @@ app.layout = html.Div([
                         #        style = {'textAlign': 'left',
                         #        'paddingLeft':'30px'}),
 
-                        html.Br(),
-                        html.Br(),
-                        html.H3('Upcoming Events Hosted by Other Groups',
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'20px',
-                                'font-weight':'bold'}),
-                        html.H4(dcc.Markdown('None known at this time.',
-                                              link_target="_blank"),
-                                style = {'textAlign': 'left',
-                                'paddingLeft':'30px'}),
+                        #html.Br(),
+                        #html.Br(),
+                        #html.H3('Upcoming Events Hosted by Other Groups',
+                        #        style = {'textAlign': 'left',
+                        #        'paddingLeft':'20px',
+                        #        'font-weight':'bold'}),
+                        #html.H4(dcc.Markdown('None known at this time.',
+                        #                      link_target="_blank"),
+                        #        style = {'textAlign': 'left',
+                        #        'paddingLeft':'30px'}),
 
                         #html.H4(dcc.Markdown('9/27/2025: [Coralville Trash Pick Up](https://www.facebook.com/events/1324939625881503)',
                         #                      link_target="_blank"),
@@ -380,7 +380,15 @@ app.layout = html.Div([
                                 'paddingLeft':'30px'}),
                         
 
-                        
+                        #html.H4("Litter Crew in Action at Whispering Meadows on 6/8/2025",
+                        #        style = {'textAlign': 'left',
+                        #        'paddingLeft':'30px',
+                        #        'font-weight':'bold'}),
+                        #html.Video(
+                        #    controls=True,
+                        #    src=r"/assets/Trash Pickup.mp4",  #MP4 video file
+                        #    style={'width': '80%', 'height': 'auto'}
+                        #),
 
 
 
